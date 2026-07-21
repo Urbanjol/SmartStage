@@ -1,0 +1,87 @@
+import 'package:flutter/material.dart';
+
+// This card will be called when choosing different types of taxis.
+class VehicleOptionCard extends StatelessWidget {
+  final String title;
+  final String subtitle;
+  final IconData icon;
+  final String priceEstimate;
+  final bool isSelected;
+  final VoidCallback onTap;
+
+  const VehicleOptionCard({
+    Key? key,
+    required this.title,
+    required this.subtitle,
+    required this.icon,
+    required this.priceEstimate,
+    required this.isSelected,
+    required this.onTap,
+  }) : super(key: key);
+
+  @override
+  Widget build(BuildContext context) {
+    return GestureDetector(
+      onTap: onTap,
+      child: AnimatedContainer(
+        duration: const Duration(milliseconds: 200),
+        margin: const EdgeInsets.symmetric(vertical: 6, horizontal: 16),
+        padding: const EdgeInsets.all(16),
+        decoration: BoxDecoration(
+          // FIXED: Added the named parameter 'color:' prefix
+          color: isSelected ? const Color(0xFF0056b3).withOpacity(0.05) : Colors.white,
+          borderRadius: BorderRadius.circular(12),
+          border: Border.all(
+            // FIXED: Corrected 0xFF005b3 typo to full 8-char hex 0xFF0056b3
+            color: isSelected ? const Color(0xFF0056b3) : Colors.grey.shade300,
+            width: isSelected ? 2 : 1,
+          ),
+          boxShadow: [
+            BoxShadow(
+              color: Colors.black.withOpacity(0.04),
+              blurRadius: 6,
+              offset: const Offset(0, 3),
+            )
+          ],
+        ),
+        child: Row(
+          children: [
+            CircleAvatar(
+              // FIXED: Corrected hex typo here too, and removed non-existent 'textColor' parameter
+              backgroundColor: isSelected ? const Color(0xFF0056b3) : Colors.grey.shade100,
+              child: Icon(
+                icon,
+                color: isSelected ? Colors.white : Colors.grey.shade700,
+              ),
+            ),
+            const SizedBox(width: 16),
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    title,
+                    style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 16),
+                  ),
+                  Text(
+                    subtitle,
+                    // FIXED: This will now compile cleanly since the global type confusion is gone
+                    style: TextStyle(color: Colors.grey.shade600, fontSize: 13),
+                  ),
+                ],
+              ),
+            ),
+            Text(
+              priceEstimate,
+              style: const TextStyle(
+                fontWeight: FontWeight.bold,
+                fontSize: 16,
+                color: Colors.orange,
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+}

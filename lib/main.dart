@@ -1,0 +1,59 @@
+import 'package:flutter/material.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:shared_preferences/shared_preferences.dart';
+import '../Screens/navigation_shell.dart';
+import '../Providers/theme_provider.dart';
+import '../Providers/service_providers.dart';
+import '../Screens/login_screen.dart';
+import '../Screens/splash_screen.dart';
+
+void main() async {
+  WidgetsFlutterBinding.ensureInitialized();
+  final sharedPrefs = await SharedPreferences.getInstance();
+  runApp(
+    // CRITICAL: ProviderScope stores the state of all your backend providers
+    ProviderScope(
+      overrides: [
+        sharedPreferencesInstanceProvider.overrideWithValue(sharedPrefs),
+      ],
+      child: const SmartStageApp(),
+    ),
+  );
+}
+
+class SmartStageApp extends ConsumerWidget {
+  const SmartStageApp({Key? key}) : super(key: key);
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    final themeMode = ref.watch(themeModeProvider);
+    return MaterialApp(
+      title: 'SmartStage',
+      debugShowCheckedModeBanner: false,
+      themeMode: themeMode,
+      // LIGHT THEME CONFIGURATION
+      theme: ThemeData(
+        brightness: Brightness.light,
+        primaryColor: const Color(0xFF0056b3),
+        scaffoldBackgroundColor: Colors.white,
+        cardColor: Colors.white,
+        dividerColor: Colors.grey.shade100,
+      ),
+      // DARK THEME CONFIGURATION (Midnight Cobalt & Deep Navy)
+      darkTheme: ThemeData(
+        brightness: Brightness.dark,
+        primaryColor: const Color(0xFF0A192F), // Deep navy background
+        scaffoldBackgroundColor: const Color(0xFF0A192F),
+        cardColor: const Color(0xFF172A45), // Slate accent containers
+        dividerColor: Colors.white10.withOpacity(0.05),
+      ),
+      //theme: ThemeData(
+        //primaryColor: const Color(0xFF0056b3), // Corporate Branding Identity
+        //scaffoldBackgroundColor: Colors.white,
+      //),
+      //home: const LoginScreen(),
+      //home: const SplashScreen(),
+      home: const NavigationShell(), // Drops directly into our tab controller shell
+    );
+  }
+}

@@ -1,0 +1,161 @@
+import 'package:flutter/material.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
+
+// Import our modular toolkit components
+import '../Widgets/location_input.dart';
+import '../Widgets/vehicle_option_card.dart';
+import '../Widgets/primary_action_button.dart';
+
+class PrivateBookingScreen extends ConsumerStatefulWidget {
+  const PrivateBookingScreen({Key? key}) : super(key: key);
+
+  @override
+  ConsumerState<PrivateBookingScreen> createState() => _PrivateBookingScreenState();
+}
+
+class _PrivateBookingScreenState extends ConsumerState<PrivateBookingScreen> {
+  final TextEditingController _destinationController = TextEditingController();
+  final TextEditingController _daysController = TextEditingController(text: "1");
+
+  String _selectedEventType = 'Wedding';
+  String _selectedVehicle = 'Coaster';
+  bool _isSubmitting = false;
+
+  final List<String> _eventTypes = ['Wedding', 'Burial Procession', 'Corporate Tour', 'Family Event'];
+
+  void _submitBookingRequest() async {
+    setState(() => _isSubmitting = true);
+
+    // Simulate your BookingService state machine triggering an Escrow hold allocation
+    await Future.delayed(const Duration(seconds: 2));
+
+    if (!mounted) return;
+    setState(() => _isSubmitting = false);
+
+    ScaffoldMessenger.of(context).showSnackBar(
+      const SnackBar(
+        content: Text("Logistics request broadcasted! Awaiting driver counter-offers."),
+        backgroundColor: Colors.green,
+      ),
+    );
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return Scaffold(
+      appBar: AppBar(
+        title: const Text("Private Event Logistics", style: TextStyle(fontWeight: FontWeight.bold, color: Colors.white)),
+        backgroundColor: const Color(0xFF0056b3),
+        elevation: 0,
+      ),
+      body: SingleChildScrollView(
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            // Header summary Banner
+            Container(
+              width: double.infinity,
+              padding: const EdgeInsets.all(16),
+              color: const Color(0xFF0056b3).withOpacity(0.05),
+              child: const Text(
+                "Book dedicated regional fleets with conditional escrow security deposits.",
+                style: TextStyle(color: Color(0xFF0056b3), fontSize: 13, fontWeight: FontWeight.w500),
+              ),
+            ),
+
+            const Padding(
+              padding: EdgeInsets.only(left: 16, top: 16, bottom: 4),
+              child: Text("1. Event Parameters", style: TextStyle(fontWeight: FontWeight.bold, fontSize: 15)),
+            ),
+
+            // Dropdown Selector for Logistics Profile
+            Padding(
+              padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 6),
+              child: DropdownButtonFormField<String>(
+                value: _selectedEventType,
+                decoration: InputDecoration(
+                  border: OutlineInputBorder(borderRadius: BorderRadius.circular(12)),
+                  contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+                  filled: true,
+                  fillColor: Colors.grey.shade50,
+                ),
+                items: _eventTypes.map((type) => DropdownMenuItem(value: type, child: Text(type))).toList(),
+                onChanged: (val) => setState(() => _selectedEventType = val!),
+              ),
+            ),
+
+            LocationInput(
+              HintText: "Enter Final Procession Destination",
+              icon: Icons.flag,
+              iconColor: Colors.orange,
+              controller: _destinationController,
+            ),
+
+            Padding(
+              padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 6),
+              child: Row(
+                children: [
+                  const Text("Duration Needed:", style: TextStyle(fontWeight: FontWeight.w500)),
+                  const SizedBox(width: 16),
+                  SizedBox(
+                    width: 70,
+                    child: TextField(
+                      controller: _daysController,
+                      keyboardType: TextInputType.number,
+                      textAlign: TextAlign.center,
+                      decoration: InputDecoration(
+                        contentPadding: const EdgeInsets.symmetric(vertical: 8),
+                        border: OutlineInputBorder(borderRadius: BorderRadius.circular(8)),
+                      ),
+                    ),
+                  ),
+                  const SizedBox(width: 8),
+                  const Text("Days", style: TextStyle(color: Colors.grey)),
+                ],
+              ),
+            ),
+
+            const Padding(
+              padding: EdgeInsets.only(left: 16, top: 20, bottom: 4),
+              child: Text("2. Select Fleet Asset Configuration", style: TextStyle(fontWeight: FontWeight.bold, fontSize: 15)),
+            ),
+
+            VehicleOptionCard(
+              vehicleType: "Toyota Coaster Fleet",
+              capacity: "30-Seater Medium Duty Bus. Ideal for large groups.",
+              estimatedFare: "450,000 UGX/Day",
+              iconData: Icons.directions_bus,
+              isSelected: _selectedVehicle == 'Coaster',
+              onTap: () => setState(() => _selectedVehicle = 'Coaster'),
+            ),
+
+            VehicleOptionCard(
+              vehicleType: "Dual Drone Vans Pack",
+              capacity: "Two 14-Seater commuter mini-buses running convoy.",
+              estimatedFare: "600,000 UGX/Day",
+              iconData: Icons.airport_shuttle,
+              isSelected: _selectedVehicle == 'Vans',
+              onTap: () => setState(() => _selectedVehicle = 'Vans'),
+            ),
+
+            const SizedBox(height: 16),
+
+            PrimaryActionButton(
+              label: _isSubmitting ? "Locking Escrow..." : "Initialize Private Charter Request",
+              isLoading: _isSubmitting,
+              onTap: _destinationController.text.isEmpty ? null : _submitBookingRequest,
+            ),
+            const SizedBox(height: 30),
+          ],
+        ),
+      ),
+    );
+  }
+
+  @override
+  void dispose() {
+    _destinationController.dispose();
+    _daysController.dispose();
+    super.dispose();
+  }
+}
