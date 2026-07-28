@@ -1,0 +1,48 @@
+{
+  "project_info": {
+    "project_number": "788767662827",
+    "project_id": "smartstage-647ec",
+    "storage_bucket": "smartstage-647ec.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:788767662827:android:448be02de2113f5d7614ae",
+        "android_client_info": {
+          "package_name": "com.example.smart_stage"
+        }
+      },
+      "oauth_client": [],
+      "api_key": [
+        {
+          "current_key": "AIzaSyAl2gL8AHewjXPx62dQaws7jmoVbiPVyzY"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": []
+        }
+      }
+    },
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:788767662827:android:251659b54186814a7614ae",
+        "android_client_info": {
+          "package_name": "com.urbanicon.smartstage"
+        }
+      },
+      "oauth_client": [],
+      "api_key": [
+        {
+          "current_key": "AIzaSyAl2gL8AHewjXPx62dQaws7jmoVbiPVyzY"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": []
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}

@@ -9,6 +9,11 @@ import '../Widgets/price_tag.dart';
 import '../Widgets/error_message.dart';
 import '../Widgets/morph_transition_button.dart';
 import '../Widgets/taxi_metal_poster_card.dart';
+import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:cloud_functions/cloud_functions.dart';
+import '../models/Journey_model.dart';
+import '../Widgets/journey_results_sheet.dart';
+
 
 class HomeMapScreen extends ConsumerStatefulWidget {
   const HomeMapScreen({Key? key}) : super(key: key);
@@ -21,6 +26,8 @@ class _HomeMapScreenState extends ConsumerState<HomeMapScreen> {
   final TextEditingController _pickupController = TextEditingController();
   final TextEditingController _destinationController = TextEditingController();
   final MapController _mapController = MapController();
+  List<Journey> _journeys = [];
+  bool _isSearching = false;
 
   // Mock initial coordinates for Kampala, Uganda central hub
   final LatLng _kampalaCenter = const LatLng(0.3136, 32.5811);
@@ -35,8 +42,139 @@ class _HomeMapScreenState extends ConsumerState<HomeMapScreen> {
     _pickupController.text = "Current Location (Kampala Stage)";
   }
 
+  //new new new new new new new new new ne w
+  Future<void> _searchJourneys() async {
+    final destination = _destinationController.text.trim();
+    if (destination.isEmpty) {
+      setState(() => _errorMessage = "Please enter a destination");
+      return;
+    }
+
+    setState(() {
+      _isSearching = true;
+      _errorMessage = null;
+      _journeys = [];
+    });
+
+    try {
+      final callable =
+      FirebaseFunctions.instance.httpsCallable('findJourney');
+      final result = await callable.call({
+        'origin': {
+          'lat': _kampalaCenter.latitude,
+          'lng': _kampalaCenter.longitude,
+        },
+        'destination': destination,
+        'preference': 'fastest',
+      });
+
+      final data = result.data as Map<String, dynamic>;
+      final journeysList = data['journeys'] as List<dynamic>? ?? [];
+
+      setState(() {
+        _journeys = journeysList
+            .map((j) => Journey.fromJson(j as Map<String, dynamic>))
+            .toList();
+        _isSearching = false;
+
+        if (_journeys.isEmpty) {
+          _errorMessage = "No routes found to $destination";
+        }
+      });
+
+      if (_journeys.isNotEmpty) {
+        _showJourneyResults();
+      }
+    } catch (e) {
+      setState(() {
+        _isSearching = false;
+        _errorMessage = "Search failed: $e";
+      });
+    }
+  }
+
+  void _showJourneyResults() {
+    showModalBottomSheet(
+      context: context,
+      isScrollControlled: true,
+      backgroundColor: Colors.transparent,
+      builder: (context) => DraggableScrollableSheet(
+        initialChildSize: 0.6,
+        minChildSize: 0.3,
+        maxChildSize: 0.85,
+        builder: (context, scrollController) => JourneyResultsSheet(
+          journeys: _journeys,
+          destination: _destinationController.text.trim(),
+        ),
+      ),
+    );
+  }
+
+  //triggers real cloud function routing instead of mock data
+  Future<void>_searchNearbyTaxis() async {
+    setState(() {
+      _isLoadingDrivers = true;
+      _errorMessage = null;
+    });
+    try{
+      final destination = _destinationController.text.trim();
+      if (destination.isEmpty){
+        setState(() {
+          _errorMessage = "Please enter a destination";
+          _isLoadingDrivers = false;
+        });
+        return;
+      }
+      //call the cloud functions
+      final HttpsCallable callable = FirebaseFunctions.instance.httpsCallable('findJourney');
+      final result = await callable.call({
+        'origin':{
+          'lat': _kampalaCenter.latitude,
+          'lng': _kampalaCenter.longitude,
+        },
+        'destination': destination,
+        'preference': 'fastest'
+      });
+      final data = result.data as Map<String,dynamic>;
+      final journeys = data['journeys'] as List<dynamic>;
+      if(journeys.isEmpty){
+        setState((){
+         _errorMessage = "No taxi found for this route";
+         _isLoadingDrivers = false;
+        });
+        return;
+      }
+      //Extract taxi positions from journey legs
+      //for now we place them near stages on the route
+      final List<LatLng> driverPositions = [];
+      for(final journey in journeys){
+        final legs = journey['legs'] as List<dynamic>;
+        for(final leg in legs){
+          // We need stage coordinates. For now, offset from center.
+          // In production, store stage coordinates and use them.
+          final stageName = leg['stage'] as String;
+          // Simple offset based on stage name hash
+          final offset = stageName.hashCode % 10;
+          driverPositions.add(LatLng(
+              _kampalaCenter.latitude + (offset - 5) * 0.005,
+              _kampalaCenter.longitude + (offset - 5) * 0.005,
+          ));
+        }
+      }
+      setState(() {
+        _nearbyDriverPositions = driverPositions;
+        _isLoadingDrivers = false;
+      });
+    } catch (e) {
+      setState(() {
+        _isLoadingDrivers = false;
+        _errorMessage = "Could not find journeys: $e";
+      });
+    }
+  }
+
   /// Triggers spatial indexing simulation matching
-  Future<void> _searchNearbyTaxis() async {
+  Future<void> _searchNearbyTaxisC() async {
     setState(() {
       _isLoadingDrivers = true;
       _errorMessage = null;
@@ -277,7 +415,8 @@ class _HomeMapScreenState extends ConsumerState<HomeMapScreen> {
                           //replace the PrimaryActionButton with our Morph_transition
                           MorphingActionButton(
                             onScanningStarted: () {
-                              _searchNearbyTaxis();
+                              _searchJourneys();
+                              //_searchNearbyTaxis();
                               //,
                               //label: _nearbyDriverPositions.isEmpty ? "Scan SmartStage Rings" : "Confirm Stage Order",
                               //isLoading: _isLoadingDrivers,

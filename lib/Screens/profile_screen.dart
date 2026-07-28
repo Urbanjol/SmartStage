@@ -4,6 +4,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 // Import our modular toolkit components and theme provider
 import '../Widgets/verification_badge.dart';
 import '../Providers/theme_provider.dart';
+import '../Screens/driver_setup_screen.dart';
 
 class ProfileScreen extends ConsumerWidget {
   const ProfileScreen({Key? key}) : super(key: key);
@@ -226,6 +227,28 @@ class ProfileScreen extends ConsumerWidget {
                   Icons.arrow_forward_ios, size: 14, color: textSecondaryColor),
               onTap: () {},
             ),
+            ListTile(
+              leading: Icon(Icons.directions_bus,
+                  color: isDarkMode ? Colors.orange : primaryBrandColor),
+              title: Text(
+                "Become a Driver",
+                style: TextStyle(fontSize: 14,
+                    fontWeight: FontWeight.w500,
+                    color: textPrimaryColor),
+              ),
+              trailing: Icon(
+                  Icons.arrow_forward_ios, size: 14, color: textSecondaryColor),
+              onTap: () {
+                Navigator.push(
+                  context,
+                  MaterialPageRoute(
+                    builder: (context) => const DriverSetupScreen(),
+                  ),
+                );
+              },
+            ),
+            Divider(height: 1, indent: 56, color: Theme.of(context).dividerColor),
+
             const SizedBox(height: 30),
           ],
         ),
