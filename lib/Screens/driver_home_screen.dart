@@ -1,7 +1,15 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:firebase_auth/firebase_auth.dart';
+import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:cloud_functions/cloud_functions.dart';
+import '../Config/theme.dart';
+import 'driver_request_screen.dart';
+//import 'driver_requests_screen.dart';
+import 'notification_screen.dart';
+//import 'notifications_screen.dart';
 
-class DriverHomeScreen extends StatefulWidget {
+class DriverHomeScreen extends ConsumerStatefulWidget {
   final String userId;
   final String matatuId;
   final String matatuPlate;
@@ -18,40 +26,44 @@ class DriverHomeScreen extends StatefulWidget {
   }) : super(key: key);
 
   @override
-  State<DriverHomeScreen> createState() => _DriverHomeScreenState();
+  ConsumerState<DriverHomeScreen> createState() => _DriverHomeScreenState();
 }
 
-class _DriverHomeScreenState extends State<DriverHomeScreen> {
-  String _status = 'IDLE';
+class _DriverHomeScreenState extends ConsumerState<DriverHomeScreen> {
   String _seatState = 'space_available';
+  String _status = 'EN_ROUTE';
+  int _seatsAvailable = 14;
+  int _earningsToday = 0;
   bool _isUpdating = false;
+  bool _isOnline = true;
 
-  Future<void> _updateStatus(String status) async {
-    setState(() => _isUpdating = true);
-
-    try {
-      final callable =
-      FirebaseFunctions.instance.httpsCallable('updateMatatuLocation');
-      await callable.call({
-        'matatu_id': widget.matatuId,
-        'driver_id': widget.userId,
-        'status': status,
-        'seats_available': _seatState == 'full' ? 0 : 5,
-      });
-
-      setState(() => _status = status);
-    } catch (e) {
-      if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('Error: $e')),
-        );
-      }
-    }
-
-    setState(() => _isUpdating = false);
+  @override
+  void initState() {
+    super.initState();
+    _loadDriverData();
   }
 
-  Future<void> _updateSeatState(String state) async {
+  Future<void> _loadDriverData() async {
+    try {
+      final doc = await FirebaseFirestore.instance
+          .collection('matatus')
+          .doc(widget.matatuId)
+          .get();
+
+      if (doc.exists) {
+        final data = doc.data()!;
+        setState(() {
+          _seatState = data['seat_state'] ?? 'space_available';
+          _status = data['status'] ?? 'EN_ROUTE';
+          _seatsAvailable = (data['seats_available'] as num?)?.toInt() ?? 14;
+        });
+      }
+    } catch (e) {
+      // Silently fail
+    }
+  }
+
+  Future<void> _updateSeatState(String newState) async {
     setState(() => _isUpdating = true);
 
     try {
@@ -59,259 +71,440 @@ class _DriverHomeScreenState extends State<DriverHomeScreen> {
       FirebaseFunctions.instance.httpsCallable('updateSeatStatus');
       await callable.call({
         'matatu_id': widget.matatuId,
-        'seat_state': state,
+        'seat_state': newState,
       });
 
-      setState(() => _seatState = state);
-      if (state == 'full') {
-        _updateStatus('EN_ROUTE');
-      }
-    } catch (e) {
-      if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('Error: $e')),
-        );
-      }
-    }
+      setState(() {
+        _seatState = newState;
+        _isUpdating = false;
+      });
 
-    setState(() => _isUpdating = false);
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text('Seat status updated'),
+          backgroundColor: SmartStageColors.electricGreen,
+        ),
+      );
+    } catch (e) {
+      setState(() => _isUpdating = false);
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text('Failed to update: $e'),
+          backgroundColor: SmartStageColors.red,
+        ),
+      );
+    }
+  }
+
+  Future<void> _toggleOnline() async {
+    setState(() => _isUpdating = true);
+
+    try {
+      final newStatus = _isOnline ? 'OFF_DUTY' : 'EN_ROUTE';
+      final callable =
+      FirebaseFunctions.instance.httpsCallable('updateMatatuLocation');
+      await callable.call({
+        'matatu_id': widget.matatuId,
+        'location': {
+          'lat': 0.3136,
+          'lng': 32.5811,
+        },
+        'status': newStatus,
+      });
+
+      setState(() {
+        _isOnline = !_isOnline;
+        _status = newStatus;
+        _isUpdating = false;
+      });
+    } catch (e) {
+      setState(() => _isUpdating = false);
+    }
   }
 
   @override
   Widget build(BuildContext context) {
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+
     return Scaffold(
-      backgroundColor: Colors.white,
-      body: SafeArea(
-        child: Padding(
-          padding: const EdgeInsets.all(24),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              // Header
-              Row(
-                mainAxisAlignment: MainAxisAlignment.spaceBetween,
+      backgroundColor: isDark
+          ? SmartStageColors.darkBackground
+          : SmartStageColors.lightBackground,
+      appBar: AppBar(
+        title: Text(widget.matatuPlate),
+        backgroundColor: isDark
+            ? SmartStageColors.deepNavy
+            : SmartStageColors.deepNavy,
+        actions: [
+          IconButton(
+            icon: const Icon(Icons.notifications_outlined),
+            onPressed: () {
+              Navigator.push(
+                context,
+                MaterialPageRoute(
+                  builder: (context) => const NotificationsScreen(),
+                ),
+              );
+            },
+          ),
+        ],
+      ),
+      body: SingleChildScrollView(
+        padding: const EdgeInsets.all(16),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            // Online Toggle
+            Container(
+              padding: const EdgeInsets.all(20),
+              decoration: BoxDecoration(
+                gradient: LinearGradient(
+                  colors: _isOnline
+                      ? [
+                    SmartStageColors.electricGreen.withOpacity(0.2),
+                    SmartStageColors.deepNavy,
+                  ]
+                      : [
+                    SmartStageColors.greyDark.withOpacity(0.2),
+                    SmartStageColors.deepNavy,
+                  ],
+                  begin: Alignment.topLeft,
+                  end: Alignment.bottomRight,
+                ),
+                borderRadius: BorderRadius.circular(20),
+                border: Border.all(
+                  color: _isOnline
+                      ? SmartStageColors.electricGreen.withOpacity(0.5)
+                      : SmartStageColors.greyDark,
+                ),
+              ),
+              child: Row(
                 children: [
-                  const Text(
-                    'Driver Dashboard',
-                    style: TextStyle(
-                      fontSize: 24,
-                      fontWeight: FontWeight.bold,
+                  Container(
+                    width: 50,
+                    height: 50,
+                    decoration: BoxDecoration(
+                      shape: BoxShape.circle,
+                      color: _isOnline
+                          ? SmartStageColors.electricGreen
+                          : SmartStageColors.greyDark,
+                      boxShadow: _isOnline
+                          ? [
+                        BoxShadow(
+                          color: SmartStageColors.greenGlow,
+                          blurRadius: 20,
+                          spreadRadius: 2,
+                        ),
+                      ]
+                          : null,
+                    ),
+                    child: Icon(
+                      _isOnline ? Icons.check : Icons.close,
+                      color: SmartStageColors.white,
+                      size: 26,
                     ),
                   ),
-                  Container(
-                    padding: const EdgeInsets.symmetric(
-                        horizontal: 12, vertical: 6),
-                    decoration: BoxDecoration(
-                      color: _status == 'LOADING' || _status == 'EN_ROUTE'
-                          ? Colors.green.shade50
-                          : Colors.grey.shade100,
-                      borderRadius: BorderRadius.circular(20),
+                  const SizedBox(width: 14),
+                  Expanded(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text(
+                          _isOnline ? 'ONLINE' : 'OFFLINE',
+                          style: TextStyle(
+                            fontSize: 18,
+                            fontWeight: FontWeight.bold,
+                            color: _isOnline
+                                ? SmartStageColors.electricGreen
+                                : SmartStageColors.greyMid,
+                          ),
+                        ),
+                        Text(
+                          _isOnline
+                              ? 'Passengers can see you'
+                              : 'You are hidden from passengers',
+                          style: TextStyle(
+                            fontSize: 12,
+                            color: isDark
+                                ? SmartStageColors.greyMid
+                                : SmartStageColors.greyDark,
+                          ),
+                        ),
+                      ],
                     ),
-                    child: Text(
-                      _status,
-                      style: TextStyle(
-                        color: _status == 'LOADING' || _status == 'EN_ROUTE'
-                            ? Colors.green
-                            : Colors.grey,
-                        fontWeight: FontWeight.bold,
-                      ),
-                    ),
+                  ),
+                  Switch(
+                    value: _isOnline,
+                    onChanged: (_) => _toggleOnline(),
+                    activeColor: SmartStageColors.electricGreen,
                   ),
                 ],
               ),
-              const SizedBox(height: 8),
-              Text(
-                widget.matatuPlate,
-                style: TextStyle(
-                  fontSize: 16,
-                  color: Colors.grey.shade600,
-                ),
-              ),
-              const SizedBox(height: 4),
-              Text(
-                widget.routeNames.join(' → '),
-                style: TextStyle(
-                  fontSize: 14,
-                  color: Colors.grey.shade500,
-                ),
-              ),
-              const SizedBox(height: 32),
+            ),
+            const SizedBox(height: 20),
 
-              // Start Route Button
-              if (_status == 'IDLE' || _status == 'OFFLOADING')
-                SizedBox(
-                  width: double.infinity,
-                  child: ElevatedButton(
-                    onPressed: _isUpdating
-                        ? null
-                        : () => _updateStatus('LOADING'),
-                    style: ElevatedButton.styleFrom(
-                      backgroundColor: const Color(0xFF10B981),
-                      foregroundColor: Colors.white,
-                      padding: const EdgeInsets.symmetric(vertical: 20),
-                      shape: RoundedRectangleBorder(
-                        borderRadius: BorderRadius.circular(16),
-                      ),
-                    ),
-                    child: _isUpdating
-                        ? const CircularProgressIndicator(color: Colors.white)
-                        : const Text(
-                      'START ROUTE',
-                      style: TextStyle(
-                        fontSize: 18,
-                        fontWeight: FontWeight.bold,
-                      ),
-                    ),
-                  ),
+            // Stats Row
+            Row(
+              children: [
+                _buildStatCard(
+                  context,
+                  label: 'EARNINGS',
+                  value: 'UGX ${_earningsToday.toString()}',
+                  icon: Icons.payments_outlined,
+                  color: SmartStageColors.gold,
                 ),
-
-              if (_status == 'LOADING') ...[
-                const SizedBox(height: 24),
-                const Text(
-                  'SEAT STATUS',
-                  style: TextStyle(
-                    fontSize: 14,
-                    fontWeight: FontWeight.bold,
-                    color: Colors.grey,
-                    letterSpacing: 1,
-                  ),
-                ),
-                const SizedBox(height: 12),
-                // Seat status buttons
-                Row(
-                  children: [
-                    Expanded(
-                      child: _seatButton(
-                        'Space Available',
-                        'space_available',
-                        Colors.green,
-                      ),
-                    ),
-                    const SizedBox(width: 8),
-                    Expanded(
-                      child: _seatButton(
-                        'Filling Up',
-                        'filling_up',
-                        Colors.orange,
-                      ),
-                    ),
-                    const SizedBox(width: 8),
-                    Expanded(
-                      child: _seatButton(
-                        'Full',
-                        'full',
-                        Colors.red,
-                      ),
-                    ),
-                  ],
+                const SizedBox(width: 10),
+                _buildStatCard(
+                  context,
+                  label: 'SEATS LEFT',
+                  value: _seatsAvailable.toString(),
+                  icon: Icons.event_seat,
+                  color: SmartStageColors.electricGreen,
                 ),
               ],
+            ),
+            const SizedBox(height: 20),
 
-              if (_status == 'EN_ROUTE')
-                Padding(
-                  padding: const EdgeInsets.only(top: 24),
-                  child: SizedBox(
-                    width: double.infinity,
-                    child: ElevatedButton(
-                      onPressed: _isUpdating
-                          ? null
-                          : () => _updateStatus('OFFLOADING'),
-                      style: ElevatedButton.styleFrom(
-                        backgroundColor: const Color(0xFF0056b3),
-                        foregroundColor: Colors.white,
-                        padding: const EdgeInsets.symmetric(vertical: 20),
-                        shape: RoundedRectangleBorder(
-                          borderRadius: BorderRadius.circular(16),
-                        ),
-                      ),
-                      child: const Text(
-                        'ARRIVED AT DESTINATION',
-                        style: TextStyle(
-                          fontSize: 18,
-                          fontWeight: FontWeight.bold,
-                        ),
-                      ),
-                    ),
-                  ),
+            // Seat State
+            Text(
+              'SEAT STATUS',
+              style: TextStyle(
+                fontSize: 12,
+                fontWeight: FontWeight.bold,
+                color: isDark
+                    ? SmartStageColors.greyMid
+                    : SmartStageColors.greyDark,
+                letterSpacing: 1,
+              ),
+            ),
+            const SizedBox(height: 10),
+            Row(
+              children: [
+                _buildSeatButton(
+                  context,
+                  label: 'SPACE',
+                  color: SmartStageColors.electricGreen,
+                  isSelected: _seatState == 'space_available',
+                  onTap: () => _updateSeatState('space_available'),
                 ),
-
-              const Spacer(),
-
-              // Route display
-              Container(
-                padding: const EdgeInsets.all(16),
-                decoration: BoxDecoration(
-                  color: Colors.grey.shade50,
-                  borderRadius: BorderRadius.circular(16),
+                const SizedBox(width: 8),
+                _buildSeatButton(
+                  context,
+                  label: 'FILLING',
+                  color: SmartStageColors.orange,
+                  isSelected: _seatState == 'filling_up',
+                  onTap: () => _updateSeatState('filling_up'),
                 ),
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    const Text(
-                      'ROUTE',
-                      style: TextStyle(
-                        fontSize: 12,
-                        fontWeight: FontWeight.bold,
-                        color: Colors.grey,
-                        letterSpacing: 1,
-                      ),
-                    ),
-                    const SizedBox(height: 8),
-                    ...widget.routeNames.asMap().entries.map((entry) {
-                      final i = entry.key;
-                      final name = entry.value;
-                      return Padding(
-                        padding: const EdgeInsets.only(bottom: 4),
-                        child: Row(
-                          children: [
-                            Icon(
-                              i == 0
-                                  ? Icons.trip_origin
-                                  : i == widget.routeNames.length - 1
-                                  ? Icons.flag
-                                  : Icons.circle,
-                              size: 12,
-                              color: const Color(0xFF0056b3),
-                            ),
-                            const SizedBox(width: 8),
-                            Text(name,
-                                style: const TextStyle(fontSize: 14)),
-                          ],
-                        ),
-                      );
-                    }).toList(),
-                  ],
+                const SizedBox(width: 8),
+                _buildSeatButton(
+                  context,
+                  label: 'FULL',
+                  color: SmartStageColors.red,
+                  isSelected: _seatState == 'full',
+                  onTap: () => _updateSeatState('full'),
+                ),
+              ],
+            ),
+            const SizedBox(height: 20),
+
+            // Route
+            Text(
+              'ROUTE',
+              style: TextStyle(
+                fontSize: 12,
+                fontWeight: FontWeight.bold,
+                color: isDark
+                    ? SmartStageColors.greyMid
+                    : SmartStageColors.greyDark,
+                letterSpacing: 1,
+              ),
+            ),
+            const SizedBox(height: 10),
+            Container(
+              padding: const EdgeInsets.all(16),
+              decoration: BoxDecoration(
+                color: isDark
+                    ? SmartStageColors.navyCard
+                    : SmartStageColors.white,
+                borderRadius: BorderRadius.circular(16),
+                border: Border.all(
+                  color: isDark ? Colors.white10 : SmartStageColors.greyLight,
                 ),
               ),
-            ],
-          ),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: widget.routeNames.map((stage) {
+                  return Padding(
+                    padding: const EdgeInsets.symmetric(vertical: 6),
+                    child: Row(
+                      children: [
+                        Container(
+                          width: 8,
+                          height: 8,
+                          decoration: BoxDecoration(
+                            shape: BoxShape.circle,
+                            color: SmartStageColors.electricGreen,
+                            boxShadow: [
+                              BoxShadow(
+                                color: SmartStageColors.greenGlow,
+                                blurRadius: 6,
+                              ),
+                            ],
+                          ),
+                        ),
+                        const SizedBox(width: 10),
+                        Text(
+                          stage,
+                          style: TextStyle(
+                            fontSize: 14,
+                            fontWeight: FontWeight.w500,
+                            color: isDark
+                                ? SmartStageColors.white
+                                : SmartStageColors.deepNavy,
+                          ),
+                        ),
+                      ],
+                    ),
+                  );
+                }).toList(),
+              ),
+            ),
+            const SizedBox(height: 20),
+
+            // Actions
+            Row(
+              children: [
+                Expanded(
+                  child: GlowButton(
+                    text: 'BOOKING REQUESTS',
+                    color: SmartStageColors.gold,
+                    glowColor: SmartStageColors.goldGlow,
+                    icon: Icons.inbox_outlined,
+                    onPressed: () {
+                      Navigator.push(
+                        context,
+                        MaterialPageRoute(
+                          builder: (context) => const DriverRequestsScreen(),
+                        ),
+                      );
+                    },
+                  ),
+                ),
+              ],
+            ),
+          ],
         ),
       ),
     );
   }
 
-  Widget _seatButton(String label, String state, Color color) {
-    final isSelected = _seatState == state;
-    return GestureDetector(
-      onTap: _isUpdating ? null : () => _updateSeatState(state),
+  Widget _buildStatCard(
+      BuildContext context, {
+        required String label,
+        required String value,
+        required IconData icon,
+        required Color color,
+      }) {
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+
+    return Expanded(
       child: Container(
-        padding: const EdgeInsets.symmetric(vertical: 16),
+        padding: const EdgeInsets.all(14),
         decoration: BoxDecoration(
-          color: isSelected ? color : Colors.white,
-          borderRadius: BorderRadius.circular(12),
+          color: isDark ? SmartStageColors.navyCard : SmartStageColors.white,
+          borderRadius: BorderRadius.circular(16),
           border: Border.all(
-            color: isSelected ? color : Colors.grey.shade300,
-            width: 2,
+            color: isDark ? Colors.white10 : SmartStageColors.greyLight,
           ),
         ),
-        child: Center(
-          child: Text(
-            label,
-            style: TextStyle(
-              color: isSelected ? Colors.white : Colors.black87,
-              fontWeight: FontWeight.bold,
-              fontSize: 13,
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Icon(icon, color: color, size: 22),
+            const SizedBox(height: 8),
+            Text(
+              value,
+              style: TextStyle(
+                fontSize: 16,
+                fontWeight: FontWeight.bold,
+                color: isDark
+                    ? SmartStageColors.white
+                    : SmartStageColors.deepNavy,
+              ),
             ),
+            const SizedBox(height: 2),
+            Text(
+              label,
+              style: TextStyle(
+                fontSize: 9,
+                fontWeight: FontWeight.bold,
+                color: isDark
+                    ? SmartStageColors.greyMid
+                    : SmartStageColors.greyDark,
+                letterSpacing: 1,
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Widget _buildSeatButton(
+      BuildContext context, {
+        required String label,
+        required Color color,
+        required bool isSelected,
+        required VoidCallback onTap,
+      }) {
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+
+    return Expanded(
+      child: GestureDetector(
+        onTap: onTap,
+        child: Container(
+          padding: const EdgeInsets.symmetric(vertical: 14),
+          decoration: BoxDecoration(
+            color: isSelected
+                ? color
+                : isDark
+                ? SmartStageColors.navyCard
+                : SmartStageColors.white,
+            borderRadius: BorderRadius.circular(16),
+            border: Border.all(
+              color: isSelected ? color : (isDark ? Colors.white10 : SmartStageColors.greyLight),
+            ),
+            boxShadow: isSelected
+                ? [
+              BoxShadow(
+                color: color.withOpacity(0.4),
+                blurRadius: 12,
+                spreadRadius: 1,
+              ),
+            ]
+                : null,
+          ),
+          child: Column(
+            children: [
+              Icon(
+                Icons.event_seat,
+                color: isSelected ? SmartStageColors.white : color,
+                size: 22,
+              ),
+              const SizedBox(height: 6),
+              Text(
+                label,
+                style: TextStyle(
+                  fontSize: 10,
+                  fontWeight: FontWeight.bold,
+                  color: isSelected
+                      ? SmartStageColors.white
+                      : isDark
+                      ? SmartStageColors.greyMid
+                      : SmartStageColors.greyDark,
+                ),
+              ),
+            ],
           ),
         ),
       ),

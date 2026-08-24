@@ -1,258 +1,420 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:firebase_auth/firebase_auth.dart';
+import 'package:cloud_firestore/cloud_firestore.dart';
+import '../Config/theme.dart';
+import 'notification_screen.dart';
+//import 'notifications_screen.dart';
 
-// Import our modular toolkit components and theme provider
-import '../Widgets/verification_badge.dart';
-import '../Providers/theme_provider.dart';
-import '../Screens/driver_setup_screen.dart';
-
-class ProfileScreen extends ConsumerWidget {
+class ProfileScreen extends ConsumerStatefulWidget {
   const ProfileScreen({Key? key}) : super(key: key);
 
   @override
-  Widget build(BuildContext context, WidgetRef ref) {
-    // Detect current theme mode for fine-tuned color accents
-    final isDarkMode = ref.watch(themeModeProvider) == ThemeMode.dark;
+  ConsumerState<ProfileScreen> createState() => _ProfileScreenState();
+}
 
-    // UI Theme Constants based on state
-    final Color primaryBrandColor = const Color(0xFF0056b3);
-    final Color textPrimaryColor = isDarkMode ? Colors.white : Colors.black87;
-    final Color textSecondaryColor = isDarkMode ? Colors.white70 : Colors.grey
-        .shade600;
+class _ProfileScreenState extends ConsumerState<ProfileScreen> {
+  String _userName = 'SmartStage User';
+  String _phoneNumber = '';
+  List<String> _roles = ['passenger'];
+  int _totalTrips = 0;
+  double _rating = 0.0;
+  bool _isLoading = true;
 
-    // Mock dynamic profile data
-    const String mockUserName = "Ronald Mukasa";
-    const String mockUserPhone = "+256 772 000 000";
-    const double mockWalletBalance = 185000.0;
+  @override
+  void initState() {
+    super.initState();
+    _loadUserData();
+  }
+
+  Future<void> _loadUserData() async {
+    final user = FirebaseAuth.instance.currentUser;
+    if (user == null) return;
+
+    setState(() {
+      _phoneNumber = user.phoneNumber ?? '';
+    });
+
+    try {
+      final doc = await FirebaseFirestore.instance
+          .collection('users')
+          .doc(user.uid)
+          .get();
+
+      if (doc.exists) {
+        final data = doc.data()!;
+        setState(() {
+          _userName = data['name'] ?? 'SmartStage User';
+          _roles = List<String>.from(data['roles'] ?? ['passenger']);
+          _totalTrips = (data['total_trips'] as num?)?.toInt() ?? 0;
+          _rating = (data['rating'] as num?)?.toDouble() ?? 0.0;
+        });
+      }
+    } catch (e) {
+      // Silently fail
+    }
+
+    setState(() => _isLoading = false);
+  }
+
+  Future<void> _logout() async {
+    await FirebaseAuth.instance.signOut();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+    final isDriver = _roles.contains('driver') || _roles.contains('conductor');
 
     return Scaffold(
-      backgroundColor: Theme
-          .of(context)
-          .scaffoldBackgroundColor,
+      backgroundColor: isDark
+          ? SmartStageColors.darkBackground
+          : SmartStageColors.lightBackground,
       appBar: AppBar(
-        title: const Text(
-          "SmartStage Profile",
-          style: TextStyle(fontWeight: FontWeight.bold, color: Colors.white),
-        ),
-        backgroundColor: isDarkMode
-            ? const Color(0xFF172A45)
-            : primaryBrandColor,
-        elevation: 0,
-        iconTheme: const IconThemeData(color: Colors.white),
+        title: const Text('PROFILE'),
+        backgroundColor: isDark
+            ? SmartStageColors.deepNavy
+            : SmartStageColors.deepNavy,
       ),
-      body: SingleChildScrollView(
+      body: _isLoading
+          ? const Center(
+        child: CircularProgressIndicator(
+          color: SmartStageColors.electricGreen,
+        ),
+      )
+          : SingleChildScrollView(
+        padding: const EdgeInsets.all(16),
         child: Column(
           children: [
-            // 1. AVATAR PROFILE HEADER BLOCK
+            // Profile Header
             Container(
-              width: double.infinity,
-              decoration: BoxDecoration(
-                color: isDarkMode ? const Color(0xFF172A45) : primaryBrandColor,
-                borderRadius: const BorderRadius.only(
-                  bottomLeft: Radius.circular(32),
-                  bottomRight: Radius.circular(32),
-                ),
-              ),
-              padding: const EdgeInsets.only(bottom: 32, top: 8),
-              child: Column(
-                children: [
-                  CircleAvatar(
-                    radius: 45,
-                    backgroundColor: isDarkMode
-                        ? const Color(0xFF0A192F)
-                        : Colors.white,
-                    child: Icon(
-                      Icons.person,
-                      size: 50,
-                      color: isDarkMode ? Colors.white : primaryBrandColor,
-                    ),
-                  ),
-                  const SizedBox(height: 12),
-                  const Text(
-                    mockUserName,
-                    style: TextStyle(color: Colors.white,
-                        fontSize: 20,
-                        fontWeight: FontWeight.bold),
-                  ),
-                  const SizedBox(height: 4),
-                  const Text(
-                    mockUserPhone,
-                    style: TextStyle(color: Colors.white70, fontSize: 14),
-                  ),
-                  const SizedBox(height: 16),
-                  // Reusable Trust Verification Badge
-                  const VerificationBadge(
-                    isVerified: true,
-                    title: "Identity Authenticated",
-                  ),
-                ],
-              ),
-            ),
-
-            // 2. ESCROW DIGITAL WALLET CONTAINER
-            Container(
-              margin: const EdgeInsets.all(20),
               padding: const EdgeInsets.all(20),
               decoration: BoxDecoration(
-                color: Theme
-                    .of(context)
-                    .cardColor,
-                borderRadius: BorderRadius.circular(16),
+                gradient: const LinearGradient(
+                  colors: [
+                    SmartStageColors.deepNavy,
+                    SmartStageColors.navyLight,
+                  ],
+                  begin: Alignment.topLeft,
+                  end: Alignment.bottomRight,
+                ),
+                borderRadius: BorderRadius.circular(20),
                 boxShadow: [
                   BoxShadow(
-                    color: Colors.black.withOpacity(isDarkMode ? 0.3 : 0.05),
-                    blurRadius: 10,
-                    offset: const Offset(0, 4),
-                  )
+                    color: SmartStageColors.blueGlow,
+                    blurRadius: 20,
+                    spreadRadius: 1,
+                  ),
                 ],
-                border: Border.all(
-                  color: isDarkMode ? Colors.white.withOpacity(0.05) : Colors
-                      .grey.shade100,
-                ),
               ),
               child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  Row(
-                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                    children: [
-                      Text(
-                        "ESCROW DIGITAL WALLET",
-                        style: TextStyle(
-                          fontSize: 12,
-                          fontWeight: FontWeight.bold,
-                          color: textSecondaryColor,
-                          letterSpacing: 0.5,
-                        ),
+                  // Avatar
+                  Container(
+                    width: 80,
+                    height: 80,
+                    decoration: BoxDecoration(
+                      shape: BoxShape.circle,
+                      color: SmartStageColors.electricGreen,
+                      border: Border.all(
+                        color: SmartStageColors.white,
+                        width: 3,
                       ),
-                      const Icon(
-                          Icons.account_balance_wallet, color: Colors.orange),
-                    ],
+                      boxShadow: [
+                        BoxShadow(
+                          color: SmartStageColors.greenGlow,
+                          blurRadius: 20,
+                          spreadRadius: 2,
+                        ),
+                      ],
+                    ),
+                    child: const Icon(
+                      Icons.person,
+                      color: SmartStageColors.white,
+                      size: 40,
+                    ),
                   ),
                   const SizedBox(height: 12),
                   Text(
-                    "${mockWalletBalance.toInt()} UGX",
-                    style: TextStyle(
-                      fontSize: 28,
+                    _userName,
+                    style: const TextStyle(
+                      fontSize: 20,
                       fontWeight: FontWeight.bold,
-                      color: isDarkMode ? Colors.orange : primaryBrandColor,
+                      color: SmartStageColors.white,
                     ),
                   ),
-                  const SizedBox(height: 6),
+                  const SizedBox(height: 4),
                   Text(
-                    "Funds locked securely inside automated transaction containers.",
-                    style: TextStyle(fontSize: 11, color: textSecondaryColor),
+                    _phoneNumber,
+                    style: const TextStyle(
+                      fontSize: 13,
+                      color: SmartStageColors.greyMid,
+                    ),
                   ),
-                  Divider(height: 24, color: Theme
-                      .of(context)
-                      .dividerColor),
-                  Row(
-                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                    children: [
-                      TextButton.icon(
-                        onPressed: () {},
-                        icon: const Icon(Icons.add_card, size: 18),
-                        label: const Text("Deposit MoMo"),
-                        style: TextButton.styleFrom(
-                          foregroundColor: isDarkMode
-                              ? Colors.orange
-                              : primaryBrandColor,
-                        ),
+                  const SizedBox(height: 10),
+                  Container(
+                    padding: const EdgeInsets.symmetric(
+                        horizontal: 14, vertical: 6),
+                    decoration: BoxDecoration(
+                      color: isDriver
+                          ? SmartStageColors.electricGreen
+                          : SmartStageColors.gold,
+                      borderRadius: BorderRadius.circular(20),
+                    ),
+                    child: Text(
+                      isDriver ? 'DRIVER' : 'PASSENGER',
+                      style: const TextStyle(
+                        fontSize: 10,
+                        fontWeight: FontWeight.bold,
+                        color: SmartStageColors.deepNavy,
+                        letterSpacing: 1,
                       ),
-                      TextButton.icon(
-                        onPressed: () {},
-                        icon: const Icon(Icons.history, size: 18),
-                        label: const Text("Audit Ledger"),
-                        style: TextButton.styleFrom(
-                            foregroundColor: textSecondaryColor),
-                      ),
-                    ],
-                  )
+                    ),
+                  ),
                 ],
               ),
             ),
+            const SizedBox(height: 20),
 
-            // 3. SYSTEM OPTIONS MENU LIST
-            // A. PRE-BUILT INTEGRATED DARK MODE INTERFACE TOGGLE SWITCH
-            ListTile(
-              leading: Icon(
-                isDarkMode ? Icons.dark_mode : Icons.light_mode,
-                color: isDarkMode ? Colors.orange : primaryBrandColor,
-              ),
-              title: Text(
-                "Dark Theme Interface",
-                style: TextStyle(fontSize: 14,
-                    fontWeight: FontWeight.w500,
-                    color: textPrimaryColor),
-              ),
-              trailing: Switch(
-                value: isDarkMode,
-                activeColor: Colors.orange,
-                onChanged: (value) {
-                  ref.read(themeModeProvider.notifier).toggleTheme();
-                },
-              ),
-            ),
-            Divider(height: 1, indent: 56, color: Theme
-                .of(context)
-                .dividerColor),
-
-            ListTile(
-              leading: Icon(Icons.history_edu,
-                  color: isDarkMode ? Colors.orange : primaryBrandColor),
-              title: Text(
-                "My Dispatch Bookings",
-                style: TextStyle(fontSize: 14,
-                    fontWeight: FontWeight.w500,
-                    color: textPrimaryColor),
-              ),
-              trailing: Icon(
-                  Icons.arrow_forward_ios, size: 14, color: textSecondaryColor),
-              onTap: () {},
-            ),
-            Divider(height: 1, indent: 56, color: Theme
-                .of(context)
-                .dividerColor),
-
-            ListTile(
-              leading: Icon(Icons.security,
-                  color: isDarkMode ? Colors.orange : primaryBrandColor),
-              title: Text(
-                "Privacy & Trust Protocols",
-                style: TextStyle(fontSize: 14,
-                    fontWeight: FontWeight.w500,
-                    color: textPrimaryColor),
-              ),
-              trailing: Icon(
-                  Icons.arrow_forward_ios, size: 14, color: textSecondaryColor),
-              onTap: () {},
-            ),
-            ListTile(
-              leading: Icon(Icons.directions_bus,
-                  color: isDarkMode ? Colors.orange : primaryBrandColor),
-              title: Text(
-                "Become a Driver",
-                style: TextStyle(fontSize: 14,
-                    fontWeight: FontWeight.w500,
-                    color: textPrimaryColor),
-              ),
-              trailing: Icon(
-                  Icons.arrow_forward_ios, size: 14, color: textSecondaryColor),
-              onTap: () {
-                Navigator.push(
+            // Stats Row
+            Row(
+              children: [
+                _buildStatCard(
                   context,
-                  MaterialPageRoute(
-                    builder: (context) => const DriverSetupScreen(),
-                  ),
-                );
-              },
+                  label: 'TRIPS',
+                  value: _totalTrips.toString(),
+                  icon: Icons.directions_bus,
+                  color: SmartStageColors.electricGreen,
+                ),
+                const SizedBox(width: 10),
+                _buildStatCard(
+                  context,
+                  label: 'RATING',
+                  value: _rating > 0 ? _rating.toStringAsFixed(1) : 'New',
+                  icon: Icons.star,
+                  color: SmartStageColors.gold,
+                ),
+                const SizedBox(width: 10),
+                _buildStatCard(
+                  context,
+                  label: 'STATUS',
+                  value: isDriver ? 'Active' : 'Ready',
+                  icon: Icons.check_circle,
+                  color: SmartStageColors.blueGlow,
+                ),
+              ],
             ),
-            Divider(height: 1, indent: 56, color: Theme.of(context).dividerColor),
+            const SizedBox(height: 20),
 
-            const SizedBox(height: 30),
+            // Menu Items
+            Container(
+              decoration: BoxDecoration(
+                color: isDark
+                    ? SmartStageColors.navyCard
+                    : SmartStageColors.white,
+                borderRadius: BorderRadius.circular(16),
+                border: Border.all(
+                  color: isDark
+                      ? Colors.white10
+                      : SmartStageColors.greyLight,
+                ),
+              ),
+              child: Column(
+                children: [
+                  _buildMenuItem(
+                    context,
+                    icon: Icons.notifications_outlined,
+                    title: 'Notifications',
+                    onTap: () {
+                      Navigator.push(
+                        context,
+                        MaterialPageRoute(
+                          builder: (context) =>
+                          const NotificationsScreen(),
+                        ),
+                      );
+                    },
+                  ),
+                  _buildDivider(isDark),
+                  _buildMenuItem(
+                    context,
+                    icon: Icons.history,
+                    title: 'Trip History',
+                    onTap: () {
+                      // Navigate to trip history
+                    },
+                  ),
+                  _buildDivider(isDark),
+                  _buildMenuItem(
+                    context,
+                    icon: Icons.payment_outlined,
+                    title: 'Payment Methods',
+                    onTap: () {
+                      // Navigate to payment methods
+                    },
+                  ),
+                  _buildDivider(isDark),
+                  _buildMenuItem(
+                    context,
+                    icon: Icons.settings_outlined,
+                    title: 'Settings',
+                    onTap: () {
+                      // Navigate to settings
+                    },
+                  ),
+                  _buildDivider(isDark),
+                  _buildMenuItem(
+                    context,
+                    icon: Icons.help_outline,
+                    title: 'Help & Support',
+                    onTap: () {
+                      // Navigate to help
+                    },
+                  ),
+                ],
+              ),
+            ),
+            const SizedBox(height: 20),
+
+            // Logout Button
+            GestureDetector(
+              onTap: _logout,
+              child: Container(
+                padding: const EdgeInsets.symmetric(vertical: 16),
+                decoration: BoxDecoration(
+                  color: SmartStageColors.red.withOpacity(0.1),
+                  borderRadius: BorderRadius.circular(16),
+                  border: Border.all(
+                    color: SmartStageColors.red.withOpacity(0.3),
+                  ),
+                ),
+                child: const Row(
+                  mainAxisAlignment: MainAxisAlignment.center,
+                  children: [
+                    Icon(
+                      Icons.logout,
+                      color: SmartStageColors.red,
+                      size: 20,
+                    ),
+                    SizedBox(width: 8),
+                    Text(
+                      'LOGOUT',
+                      style: TextStyle(
+                        fontSize: 14,
+                        fontWeight: FontWeight.bold,
+                        color: SmartStageColors.red,
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            ),
           ],
         ),
       ),
+    );
+  }
+
+  Widget _buildStatCard(
+      BuildContext context, {
+        required String label,
+        required String value,
+        required IconData icon,
+        required Color color,
+      }) {
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+
+    return Expanded(
+      child: Container(
+        padding: const EdgeInsets.all(14),
+        decoration: BoxDecoration(
+          color: isDark ? SmartStageColors.navyCard : SmartStageColors.white,
+          borderRadius: BorderRadius.circular(16),
+          border: Border.all(
+            color: isDark ? Colors.white10 : SmartStageColors.greyLight,
+          ),
+        ),
+        child: Column(
+          children: [
+            Icon(icon, color: color, size: 22),
+            const SizedBox(height: 8),
+            Text(
+              value,
+              style: TextStyle(
+                fontSize: 16,
+                fontWeight: FontWeight.bold,
+                color: isDark
+                    ? SmartStageColors.white
+                    : SmartStageColors.deepNavy,
+              ),
+            ),
+            const SizedBox(height: 2),
+            Text(
+              label,
+              style: TextStyle(
+                fontSize: 9,
+                fontWeight: FontWeight.bold,
+                color: isDark
+                    ? SmartStageColors.greyMid
+                    : SmartStageColors.greyDark,
+                letterSpacing: 1,
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Widget _buildMenuItem(
+      BuildContext context, {
+        required IconData icon,
+        required String title,
+        required VoidCallback onTap,
+      }) {
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+
+    return GestureDetector(
+      onTap: onTap,
+      child: Padding(
+        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
+        child: Row(
+          children: [
+            Icon(
+              icon,
+              color: SmartStageColors.electricGreen,
+              size: 20,
+            ),
+            const SizedBox(width: 12),
+            Expanded(
+              child: Text(
+                title,
+                style: TextStyle(
+                  fontSize: 14,
+                  fontWeight: FontWeight.w500,
+                  color: isDark
+                      ? SmartStageColors.white
+                      : SmartStageColors.deepNavy,
+                ),
+              ),
+            ),
+            Icon(
+              Icons.chevron_right,
+              color: isDark
+                  ? SmartStageColors.greyDark
+                  : SmartStageColors.greyMid,
+              size: 20,
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Widget _buildDivider(bool isDark) {
+    return Divider(
+      height: 1,
+      color: isDark ? Colors.white10 : SmartStageColors.greyLight,
     );
   }
 }

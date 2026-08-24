@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:firebase_auth/firebase_auth.dart';
+import '../Config/theme.dart';
 import '../Services/Auth_service.dart';
 
 class LoginScreen extends StatefulWidget {
@@ -26,7 +27,6 @@ class _LoginScreenState extends State<LoginScreen> {
       return;
     }
 
-    // Format for Uganda
     if (!phone.startsWith('+')) {
       phone = '+256${phone.replaceFirst('0', '')}';
     }
@@ -75,7 +75,6 @@ class _LoginScreenState extends State<LoginScreen> {
 
     try {
       await _authService.verifyOTP(_verificationId, otp);
-      // Navigation will be handled by auth state listener
     } catch (e) {
       setState(() {
         _errorMessage = 'Invalid OTP. Please try again.';
@@ -86,40 +85,59 @@ class _LoginScreenState extends State<LoginScreen> {
 
   @override
   Widget build(BuildContext context) {
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+
     return Scaffold(
-      backgroundColor: Colors.white,
+      backgroundColor: isDark
+          ? SmartStageColors.darkBackground
+          : SmartStageColors.lightBackground,
       body: SafeArea(
         child: SingleChildScrollView(
-          padding: const EdgeInsets.all(32),
+          padding: const EdgeInsets.all(28),
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              const SizedBox(height: 60),
+              const SizedBox(height: 40),
 
               // Logo and Title
               Center(
                 child: Column(
                   children: [
                     Container(
-                      width: 80,
-                      height: 80,
+                      width: 90,
+                      height: 90,
                       decoration: BoxDecoration(
-                        color: const Color(0xFF0056b3),
-                        borderRadius: BorderRadius.circular(20),
+                        gradient: const LinearGradient(
+                          colors: [
+                            SmartStageColors.deepNavy,
+                            SmartStageColors.electricGreen,
+                          ],
+                          begin: Alignment.topLeft,
+                          end: Alignment.bottomRight,
+                        ),
+                        borderRadius: BorderRadius.circular(28),
+                        boxShadow: [
+                          BoxShadow(
+                            color: SmartStageColors.greenGlow,
+                            blurRadius: 30,
+                            spreadRadius: 2,
+                          ),
+                        ],
                       ),
                       child: const Icon(
                         Icons.directions_bus,
-                        color: Colors.white,
-                        size: 40,
+                        color: SmartStageColors.white,
+                        size: 44,
                       ),
                     ),
                     const SizedBox(height: 24),
                     const Text(
                       'SmartStage',
                       style: TextStyle(
-                        fontSize: 32,
+                        fontSize: 34,
                         fontWeight: FontWeight.bold,
-                        color: Color(0xFF0056b3),
+                        color: SmartStageColors.deepNavy,
+                        letterSpacing: 1.2,
                       ),
                     ),
                     const SizedBox(height: 8),
@@ -127,38 +145,59 @@ class _LoginScreenState extends State<LoginScreen> {
                       'Your journey starts here',
                       style: TextStyle(
                         fontSize: 16,
-                        color: Colors.grey.shade500,
+                        color: isDark
+                            ? SmartStageColors.greyMid
+                            : SmartStageColors.greyDark,
                       ),
                     ),
                   ],
                 ),
               ),
-              const SizedBox(height: 60),
+              const SizedBox(height: 50),
 
-              // Phone Number Input
-              const Text(
+              // Phone Number Label
+              Text(
                 'PHONE NUMBER',
                 style: TextStyle(
                   fontSize: 12,
                   fontWeight: FontWeight.bold,
-                  color: Colors.grey,
+                  color: isDark
+                      ? SmartStageColors.greyMid
+                      : SmartStageColors.greyDark,
                   letterSpacing: 1,
                 ),
               ),
-              const SizedBox(height: 8),
+              const SizedBox(height: 10),
+
+              // Phone Number Input
               Container(
                 decoration: BoxDecoration(
-                  color: Colors.grey.shade50,
+                  color: isDark
+                      ? SmartStageColors.navyCard
+                      : SmartStageColors.white,
                   borderRadius: BorderRadius.circular(16),
-                  border: Border.all(color: Colors.grey.shade200),
+                  border: Border.all(
+                    color: isDark
+                        ? Colors.white10
+                        : SmartStageColors.greyLight,
+                  ),
+                  boxShadow: [
+                    BoxShadow(
+                      color: Colors.black.withOpacity(0.03),
+                      blurRadius: 10,
+                      offset: const Offset(0, 4),
+                    ),
+                  ],
                 ),
                 child: Row(
                   children: [
                     Container(
                       padding: const EdgeInsets.symmetric(
-                          horizontal: 16, vertical: 20),
+                          horizontal: 16, vertical: 18),
                       decoration: BoxDecoration(
-                        color: Colors.grey.shade100,
+                        color: isDark
+                            ? SmartStageColors.navyLight
+                            : SmartStageColors.greyLight,
                         borderRadius: const BorderRadius.only(
                           topLeft: Radius.circular(16),
                           bottomLeft: Radius.circular(16),
@@ -169,6 +208,7 @@ class _LoginScreenState extends State<LoginScreen> {
                         style: TextStyle(
                           fontSize: 16,
                           fontWeight: FontWeight.bold,
+                          color: SmartStageColors.deepNavy,
                         ),
                       ),
                     ),
@@ -177,70 +217,112 @@ class _LoginScreenState extends State<LoginScreen> {
                         controller: _phoneController,
                         keyboardType: TextInputType.phone,
                         enabled: !_isCodeSent,
-                        decoration: const InputDecoration(
+                        style: TextStyle(
+                          color: isDark
+                              ? SmartStageColors.white
+                              : SmartStageColors.deepNavy,
+                        ),
+                        decoration: InputDecoration(
                           hintText: '7XX XXX XXX',
+                          hintStyle: TextStyle(
+                            color: isDark
+                                ? SmartStageColors.greyMid
+                                : SmartStageColors.greyDark,
+                          ),
                           border: InputBorder.none,
-                          contentPadding: EdgeInsets.symmetric(
-                              horizontal: 16, vertical: 20),
+                          contentPadding: const EdgeInsets.symmetric(
+                              horizontal: 16, vertical: 18),
                         ),
                       ),
                     ),
                   ],
                 ),
               ),
-              const SizedBox(height: 16),
+              const SizedBox(height: 20),
 
-              // OTP Input (visible after code sent)
+              // OTP Input
               if (_isCodeSent) ...[
-                const Text(
+                Text(
                   'VERIFICATION CODE',
                   style: TextStyle(
                     fontSize: 12,
                     fontWeight: FontWeight.bold,
-                    color: Colors.grey,
+                    color: isDark
+                        ? SmartStageColors.greyMid
+                        : SmartStageColors.greyDark,
                     letterSpacing: 1,
                   ),
                 ),
-                const SizedBox(height: 8),
+                const SizedBox(height: 10),
                 Container(
                   decoration: BoxDecoration(
-                    color: Colors.grey.shade50,
+                    color: isDark
+                        ? SmartStageColors.navyCard
+                        : SmartStageColors.white,
                     borderRadius: BorderRadius.circular(16),
-                    border: Border.all(color: Colors.grey.shade200),
+                    border: Border.all(
+                      color: SmartStageColors.electricGreen.withOpacity(0.5),
+                    ),
+                    boxShadow: [
+                      BoxShadow(
+                        color: SmartStageColors.greenGlow,
+                        blurRadius: 15,
+                        spreadRadius: 1,
+                      ),
+                    ],
                   ),
                   child: TextField(
                     controller: _otpController,
                     keyboardType: TextInputType.number,
                     maxLength: 6,
-                    decoration: const InputDecoration(
+                    style: TextStyle(
+                      color: isDark
+                          ? SmartStageColors.white
+                          : SmartStageColors.deepNavy,
+                      letterSpacing: 4,
+                      fontSize: 18,
+                    ),
+                    decoration: InputDecoration(
                       hintText: 'Enter 6-digit code',
+                      hintStyle: TextStyle(
+                        color: isDark
+                            ? SmartStageColors.greyMid
+                            : SmartStageColors.greyDark,
+                        letterSpacing: 1,
+                        fontSize: 14,
+                      ),
                       border: InputBorder.none,
-                      contentPadding: EdgeInsets.symmetric(
-                          horizontal: 16, vertical: 20),
+                      contentPadding: const EdgeInsets.symmetric(
+                          horizontal: 16, vertical: 18),
                       counterText: '',
                     ),
                   ),
                 ),
-                const SizedBox(height: 8),
+                const SizedBox(height: 12),
               ],
 
               // Error message
               if (_errorMessage != null)
                 Container(
-                  padding: const EdgeInsets.all(12),
+                  padding: const EdgeInsets.all(14),
                   decoration: BoxDecoration(
-                    color: Colors.red.shade50,
+                    color: SmartStageColors.red.withOpacity(0.1),
                     borderRadius: BorderRadius.circular(12),
+                    border: Border.all(
+                      color: SmartStageColors.red.withOpacity(0.3),
+                    ),
                   ),
                   child: Row(
                     children: [
-                      Icon(Icons.error_outline,
-                          color: Colors.red.shade400, size: 20),
+                      const Icon(Icons.error_outline,
+                          color: SmartStageColors.red, size: 20),
                       const SizedBox(width: 8),
                       Expanded(
                         child: Text(
                           _errorMessage!,
-                          style: TextStyle(color: Colors.red.shade400),
+                          style: const TextStyle(
+                            color: SmartStageColors.red,
+                          ),
                         ),
                       ),
                     ],
@@ -249,39 +331,30 @@ class _LoginScreenState extends State<LoginScreen> {
               const SizedBox(height: 24),
 
               // Action Button
-              SizedBox(
-                width: double.infinity,
-                child: ElevatedButton(
-                  onPressed: _isLoading
-                      ? null
-                      : (_isCodeSent ? _verifyOTP : _sendOTP),
-                  style: ElevatedButton.styleFrom(
-                    backgroundColor: const Color(0xFF0056b3),
-                    foregroundColor: Colors.white,
-                    disabledBackgroundColor: Colors.grey.shade300,
-                    padding: const EdgeInsets.symmetric(vertical: 20),
-                    shape: RoundedRectangleBorder(
-                      borderRadius: BorderRadius.circular(16),
-                    ),
-                  ),
-                  child: _isLoading
-                      ? const SizedBox(
-                    width: 24,
-                    height: 24,
-                    child: CircularProgressIndicator(
-                      color: Colors.white,
-                      strokeWidth: 2,
-                    ),
-                  )
-                      : Text(
-                    _isCodeSent ? 'VERIFY & LOGIN' : 'SEND OTP',
-                    style: const TextStyle(
-                      fontSize: 16,
-                      fontWeight: FontWeight.bold,
-                    ),
+              GlowButton(
+                text: _isCodeSent ? 'VERIFY & LOGIN' : 'SEND OTP',
+                color: _isCodeSent
+                    ? SmartStageColors.electricGreen
+                    : SmartStageColors.gold,
+                glowColor: _isCodeSent
+                    ? SmartStageColors.greenGlow
+                    : SmartStageColors.goldGlow,
+                icon: _isCodeSent
+                    ? Icons.verified_outlined
+                    : Icons.send_outlined,
+                onPressed: _isLoading
+                    ? () {}
+                    : (_isCodeSent ? _verifyOTP : _sendOTP),
+              ),
+              const SizedBox(height: 16),
+
+              // Loading indicator
+              if (_isLoading)
+                const Center(
+                  child: CircularProgressIndicator(
+                    color: SmartStageColors.electricGreen,
                   ),
                 ),
-              ),
               const SizedBox(height: 16),
 
               // Terms
@@ -291,7 +364,9 @@ class _LoginScreenState extends State<LoginScreen> {
                   textAlign: TextAlign.center,
                   style: TextStyle(
                     fontSize: 12,
-                    color: Colors.grey.shade400,
+                    color: isDark
+                        ? SmartStageColors.greyMid
+                        : SmartStageColors.greyDark,
                   ),
                 ),
               ),

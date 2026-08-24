@@ -3,7 +3,7 @@ import 'package:flutter_map/flutter_map.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:latlong2/latlong.dart';
 
-// Import all the reusable components
+import '../Config/theme.dart';
 import '../Widgets/primary_action_button.dart';
 import '../Widgets/price_tag.dart';
 import '../Widgets/error_message.dart';
@@ -13,7 +13,6 @@ import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:cloud_functions/cloud_functions.dart';
 import '../models/Journey_model.dart';
 import '../Widgets/journey_results_sheet.dart';
-
 
 class HomeMapScreen extends ConsumerStatefulWidget {
   const HomeMapScreen({Key? key}) : super(key: key);
@@ -29,7 +28,6 @@ class _HomeMapScreenState extends ConsumerState<HomeMapScreen> {
   List<Journey> _journeys = [];
   bool _isSearching = false;
 
-  // Mock initial coordinates for Kampala, Uganda central hub
   final LatLng _kampalaCenter = const LatLng(0.3136, 32.5811);
 
   bool _isLoadingDrivers = false;
@@ -42,7 +40,6 @@ class _HomeMapScreenState extends ConsumerState<HomeMapScreen> {
     _pickupController.text = "Current Location (Kampala Stage)";
   }
 
-  //new new new new new new new new new ne w
   Future<void> _searchJourneys() async {
     final destination = _destinationController.text.trim();
     if (destination.isEmpty) {
@@ -110,57 +107,55 @@ class _HomeMapScreenState extends ConsumerState<HomeMapScreen> {
     );
   }
 
-  //triggers real cloud function routing instead of mock data
-  Future<void>_searchNearbyTaxis() async {
+  Future<void> _searchNearbyTaxis() async {
     setState(() {
       _isLoadingDrivers = true;
       _errorMessage = null;
     });
-    try{
+    try {
       final destination = _destinationController.text.trim();
-      if (destination.isEmpty){
+      if (destination.isEmpty) {
         setState(() {
           _errorMessage = "Please enter a destination";
           _isLoadingDrivers = false;
         });
         return;
       }
-      //call the cloud functions
-      final HttpsCallable callable = FirebaseFunctions.instance.httpsCallable('findJourney');
+
+      final HttpsCallable callable =
+      FirebaseFunctions.instance.httpsCallable('findJourney');
       final result = await callable.call({
-        'origin':{
+        'origin': {
           'lat': _kampalaCenter.latitude,
           'lng': _kampalaCenter.longitude,
         },
         'destination': destination,
         'preference': 'fastest'
       });
-      final data = result.data as Map<String,dynamic>;
+      final data = result.data as Map<String, dynamic>;
       final journeys = data['journeys'] as List<dynamic>;
-      if(journeys.isEmpty){
-        setState((){
-         _errorMessage = "No taxi found for this route";
-         _isLoadingDrivers = false;
+
+      if (journeys.isEmpty) {
+        setState(() {
+          _errorMessage = "No taxi found for this route";
+          _isLoadingDrivers = false;
         });
         return;
       }
-      //Extract taxi positions from journey legs
-      //for now we place them near stages on the route
+
       final List<LatLng> driverPositions = [];
-      for(final journey in journeys){
+      for (final journey in journeys) {
         final legs = journey['legs'] as List<dynamic>;
-        for(final leg in legs){
-          // We need stage coordinates. For now, offset from center.
-          // In production, store stage coordinates and use them.
+        for (final leg in legs) {
           final stageName = leg['stage'] as String;
-          // Simple offset based on stage name hash
           final offset = stageName.hashCode % 10;
           driverPositions.add(LatLng(
-              _kampalaCenter.latitude + (offset - 5) * 0.005,
-              _kampalaCenter.longitude + (offset - 5) * 0.005,
+            _kampalaCenter.latitude + (offset - 5) * 0.005,
+            _kampalaCenter.longitude + (offset - 5) * 0.005,
           ));
         }
       }
+
       setState(() {
         _nearbyDriverPositions = driverPositions;
         _isLoadingDrivers = false;
@@ -173,7 +168,6 @@ class _HomeMapScreenState extends ConsumerState<HomeMapScreen> {
     }
   }
 
-  /// Triggers spatial indexing simulation matching
   Future<void> _searchNearbyTaxisC() async {
     setState(() {
       _isLoadingDrivers = true;
@@ -184,13 +178,12 @@ class _HomeMapScreenState extends ConsumerState<HomeMapScreen> {
       double currentLat = _kampalaCenter.latitude;
       double currentLng = _kampalaCenter.longitude;
 
-      // Mocking spatial drivers found inside the local H3 ring
       await Future.delayed(const Duration(seconds: 1));
       setState(() {
         _nearbyDriverPositions = [
-          LatLng(currentLat + 0.003, currentLng + 0.002), // Driver A
-          LatLng(currentLat - 0.002, currentLng + 0.004), // Driver B
-          LatLng(currentLat + 0.001, currentLng - 0.003), // Driver C
+          LatLng(currentLat + 0.003, currentLng + 0.002),
+          LatLng(currentLat - 0.002, currentLng + 0.004),
+          LatLng(currentLat + 0.001, currentLng - 0.003),
         ];
         _isLoadingDrivers = false;
       });
@@ -204,10 +197,12 @@ class _HomeMapScreenState extends ConsumerState<HomeMapScreen> {
 
   @override
   Widget build(BuildContext context) {
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+
     return Scaffold(
       body: Stack(
         children: [
-          // 1. THE LIVE MAP LAYER
+          // MAP LAYER
           FlutterMap(
             mapController: _mapController,
             options: MapOptions(
@@ -216,21 +211,21 @@ class _HomeMapScreenState extends ConsumerState<HomeMapScreen> {
             ),
             children: [
               TileLayer(
-                urlTemplate: 'https://tile.openstreetmap.org/{z}/{x}/{y}.png',
+                urlTemplate: isDark
+                    ? 'https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png'
+                    : 'https://tile.openstreetmap.org/{z}/{x}/{y}.png',
                 userAgentPackageName: 'com.smartstage.app',
               ),
 
-              // MARKER LAYER: Renders taxis and custom floating PriceTagCards cleanly
               MarkerLayer(
                 markers: _nearbyDriverPositions.map((driverLatLng) {
                   return Marker(
                     point: driverLatLng,
-                    width: 320,   // Adjusted to prevent text horizontal clip
-                    height: 320,  // FIXED: Expanded to prevent the vertical RenderFlex overflow error
+                    width: 320,
+                    height: 320,
                     child: Column(
                       mainAxisSize: MainAxisSize.min,
                       children: [
-                        //lets implement our taxi metal card
                         const TaxiMetalPosterCard(
                           stageDeparture: "OLD TAXI PARK (MBARARA STAGE)",
                           destination: "MBARARA",
@@ -238,15 +233,23 @@ class _HomeMapScreenState extends ConsumerState<HomeMapScreen> {
                           loadedSeats: 12,
                           totalSeats: 14,
                         ),
-                       // const PriceTag(
-                         // routeDestination: "Entebbe Rd",
-                          //priceUGX: 3500,
-                        //),
                         const SizedBox(height: 4),
-                        const Icon(
-                          Icons.directions_car,
-                          color: Color(0xFF0056b3), // Taxi Blue
-                          size: 28,
+                        Container(
+                          decoration: BoxDecoration(
+                            shape: BoxShape.circle,
+                            boxShadow: [
+                              BoxShadow(
+                                color: SmartStageColors.greenGlow,
+                                blurRadius: 18,
+                                spreadRadius: 3,
+                              ),
+                            ],
+                          ),
+                          child: const Icon(
+                            Icons.directions_car,
+                            color: SmartStageColors.electricGreen,
+                            size: 28,
+                          ),
                         ),
                       ],
                     ),
@@ -256,19 +259,26 @@ class _HomeMapScreenState extends ConsumerState<HomeMapScreen> {
             ],
           ),
 
-          // 2. THE TOP INPUT CONTROLLER OVERLAY (PREMIUM FLOATING COMMAND CENTER)
+          // TOP SEARCH PANEL
           SafeArea(
             child: Align(
               alignment: Alignment.topCenter,
               child: Container(
-                margin: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
+                margin:
+                const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
                 decoration: BoxDecoration(
-                  color: Colors.white.withOpacity(0.96), // Translucent premium white
+                  color: isDark
+                      ? SmartStageColors.navyCard.withOpacity(0.95)
+                      : Colors.white.withOpacity(0.96),
                   borderRadius: BorderRadius.circular(20),
-                  border: Border.all(color: Colors.white.withOpacity(0.6), width: 1),
+                  border: Border.all(
+                    color: isDark
+                        ? Colors.white10
+                        : Colors.white.withOpacity(0.6),
+                  ),
                   boxShadow: [
                     BoxShadow(
-                      color: const Color(0xFF0056b3).withOpacity(0.06),
+                      color: Colors.black.withOpacity(0.08),
                       blurRadius: 20,
                       offset: const Offset(0, 8),
                     ),
@@ -277,11 +287,12 @@ class _HomeMapScreenState extends ConsumerState<HomeMapScreen> {
                 child: ClipRRect(
                   borderRadius: BorderRadius.circular(20),
                   child: Padding(
-                    padding: const EdgeInsets.symmetric(vertical: 8, horizontal: 16),
+                    padding: const EdgeInsets.symmetric(
+                        vertical: 8, horizontal: 16),
                     child: Row(
                       crossAxisAlignment: CrossAxisAlignment.center,
                       children: [
-                        // A. THE PREMIUM DOTTED ROUTE LINE GRAPHIC
+                        // DOTTED ROUTE LINE
                         Column(
                           mainAxisSize: MainAxisSize.min,
                           children: [
@@ -290,8 +301,18 @@ class _HomeMapScreenState extends ConsumerState<HomeMapScreen> {
                               height: 12,
                               decoration: BoxDecoration(
                                 shape: BoxShape.circle,
-                                color: Colors.white,
-                                border: Border.all(color: const Color(0xFF10B981), width: 2.5),
+                                color: isDark
+                                    ? SmartStageColors.navyCard
+                                    : Colors.white,
+                                border: Border.all(
+                                    color: SmartStageColors.electricGreen,
+                                    width: 2.5),
+                                boxShadow: [
+                                  BoxShadow(
+                                    color: SmartStageColors.greenGlow,
+                                    blurRadius: 8,
+                                  ),
+                                ],
                               ),
                             ),
                             Container(
@@ -299,7 +320,10 @@ class _HomeMapScreenState extends ConsumerState<HomeMapScreen> {
                               height: 38,
                               margin: const EdgeInsets.symmetric(vertical: 4),
                               child: CustomPaint(
-                                painter: DottedLinePainter(color: Colors.grey.shade300),
+                                painter: DottedLinePainter(
+                                    color: isDark
+                                        ? SmartStageColors.greyDark
+                                        : SmartStageColors.greyLight),
                               ),
                             ),
                             Container(
@@ -307,38 +331,79 @@ class _HomeMapScreenState extends ConsumerState<HomeMapScreen> {
                               height: 12,
                               decoration: BoxDecoration(
                                 shape: BoxShape.circle,
-                                color: Colors.white,
-                                border: Border.all(color: const Color(0xFF0056b3), width: 2.5),
+                                color: isDark
+                                    ? SmartStageColors.navyCard
+                                    : Colors.white,
+                                border: Border.all(
+                                    color: SmartStageColors.gold, width: 2.5),
+                                boxShadow: [
+                                  BoxShadow(
+                                    color: SmartStageColors.goldGlow,
+                                    blurRadius: 8,
+                                  ),
+                                ],
                               ),
                             ),
                           ],
                         ),
                         const SizedBox(width: 16),
 
-                        // B. THE INTEGRATED FORM FIELDS PIPELINE
+                        // INPUT FIELDS
                         Expanded(
                           child: Column(
                             mainAxisSize: MainAxisSize.min,
                             children: [
                               TextField(
                                 controller: _pickupController,
-                                style: const TextStyle(fontSize: 14, fontWeight: FontWeight.w500, color: Colors.black87),
+                                style: TextStyle(
+                                  fontSize: 14,
+                                  fontWeight: FontWeight.w500,
+                                  color: isDark
+                                      ? SmartStageColors.white
+                                      : SmartStageColors.deepNavy,
+                                ),
                                 decoration: InputDecoration(
                                   hintText: "Pickup Station",
-                                  hintStyle: TextStyle(fontSize: 14, color: Colors.grey.shade400, fontWeight: FontWeight.w400),
+                                  hintStyle: TextStyle(
+                                    fontSize: 14,
+                                    color: isDark
+                                        ? SmartStageColors.greyMid
+                                        : SmartStageColors.greyDark,
+                                    fontWeight: FontWeight.w400,
+                                  ),
                                   border: InputBorder.none,
-                                  contentPadding: const EdgeInsets.symmetric(vertical: 10),
+                                  contentPadding:
+                                  const EdgeInsets.symmetric(vertical: 10),
                                 ),
                               ),
-                              Divider(height: 1, color: Colors.grey.shade100, thickness: 1),
+                              Divider(
+                                height: 1,
+                                color: isDark
+                                    ? Colors.white10
+                                    : SmartStageColors.greyLight,
+                                thickness: 1,
+                              ),
                               TextField(
                                 controller: _destinationController,
-                                style: const TextStyle(fontSize: 14, fontWeight: FontWeight.w500, color: Colors.black87),
+                                style: TextStyle(
+                                  fontSize: 14,
+                                  fontWeight: FontWeight.w500,
+                                  color: isDark
+                                      ? SmartStageColors.white
+                                      : SmartStageColors.deepNavy,
+                                ),
                                 decoration: InputDecoration(
                                   hintText: "Where to? (e.g. Mukono, Masaka)",
-                                  hintStyle: TextStyle(fontSize: 14, color: Colors.grey.shade400, fontWeight: FontWeight.w400),
+                                  hintStyle: TextStyle(
+                                    fontSize: 14,
+                                    color: isDark
+                                        ? SmartStageColors.greyMid
+                                        : SmartStageColors.greyDark,
+                                    fontWeight: FontWeight.w400,
+                                  ),
                                   border: InputBorder.none,
-                                  contentPadding: const EdgeInsets.symmetric(vertical: 10),
+                                  contentPadding:
+                                  const EdgeInsets.symmetric(vertical: 10),
                                 ),
                               ),
                             ],
@@ -352,7 +417,7 @@ class _HomeMapScreenState extends ConsumerState<HomeMapScreen> {
             ),
           ),
 
-          // 3. BOTTOM CONTROL DRAWER & INTERACTION PANELS
+          // BOTTOM PANEL
           Align(
             alignment: Alignment.bottomCenter,
             child: Container(
@@ -367,29 +432,32 @@ class _HomeMapScreenState extends ConsumerState<HomeMapScreen> {
                     ),
                   Container(
                     decoration: BoxDecoration(
-                        color: Colors.white,
-                        borderRadius: const BorderRadius.only(
-                          topLeft: Radius.circular(28),
-                          topRight: Radius.circular(28),
+                      color: isDark
+                          ? SmartStageColors.navyCard
+                          : Colors.white,
+                      borderRadius: const BorderRadius.only(
+                        topLeft: Radius.circular(28),
+                        topRight: Radius.circular(28),
+                      ),
+                      boxShadow: [
+                        BoxShadow(
+                          color: Colors.black.withOpacity(0.08),
+                          blurRadius: 16,
+                          offset: const Offset(0, -4),
                         ),
-                        boxShadow: [
-                          BoxShadow(
-                            color: Colors.black.withOpacity(0.04),
-                            blurRadius: 16,
-                            offset: const Offset(0, -4),
-                          )
-                        ]
+                      ],
                     ),
                     padding: const EdgeInsets.only(bottom: 24, top: 12),
                     child: Column(
                       mainAxisSize: MainAxisSize.min,
                       children: [
-                        // Soft pill handle indicator
                         Container(
                           width: 36,
                           height: 4,
                           decoration: BoxDecoration(
-                            color: Colors.grey.shade200,
+                            color: isDark
+                                ? SmartStageColors.greyDark
+                                : SmartStageColors.greyLight,
                             borderRadius: BorderRadius.circular(2),
                           ),
                         ),
@@ -399,30 +467,32 @@ class _HomeMapScreenState extends ConsumerState<HomeMapScreen> {
                           child: Row(
                             mainAxisAlignment: MainAxisAlignment.spaceBetween,
                             children: [
-                              const Text(
+                              Text(
                                 "Available Taxis Nearby",
-                                style: TextStyle(fontWeight: FontWeight.bold, fontSize: 16, color: Colors.black87),
+                                style: TextStyle(
+                                  fontWeight: FontWeight.bold,
+                                  fontSize: 16,
+                                  color: isDark
+                                      ? SmartStageColors.white
+                                      : SmartStageColors.deepNavy,
+                                ),
                               ),
                               Text(
                                 "${_nearbyDriverPositions.length} Taxis Found",
-                                style: TextStyle(color: Colors.grey.shade600, fontSize: 13, fontWeight: FontWeight.w500),
+                                style: TextStyle(
+                                  color: SmartStageColors.electricGreen,
+                                  fontSize: 13,
+                                  fontWeight: FontWeight.w600,
+                                ),
                               ),
                             ],
                           ),
                         ),
                         const SizedBox(height: 16),
-                        //PrimaryActionButton(
-                          //replace the PrimaryActionButton with our Morph_transition
-                          MorphingActionButton(
-                            onScanningStarted: () {
-                              _searchJourneys();
-                              //_searchNearbyTaxis();
-                              //,
-                              //label: _nearbyDriverPositions.isEmpty ? "Scan SmartStage Rings" : "Confirm Stage Order",
-                              //isLoading: _isLoadingDrivers,
-                             // onTap: _searchNearbyTaxis
-                              //,
-                            }
+                        MorphingActionButton(
+                          onScanningStarted: () {
+                            _searchJourneys();
+                          },
                         ),
                       ],
                     ),
@@ -444,7 +514,6 @@ class _HomeMapScreenState extends ConsumerState<HomeMapScreen> {
   }
 }
 
-// 4. MATHEMATICAL DOTTED CONNECTOR PAINTER ENGINE
 class DottedLinePainter extends CustomPainter {
   final Color color;
   DottedLinePainter({required this.color});

@@ -1,7 +1,12 @@
 import * as functions from "firebase-functions";
 import * as admin from "firebase-admin";
+export * from "./escrow_functions";
+export * from "./chat_functions";
 
-admin.initializeApp();
+if (admin.apps.length === 0) {
+  admin.initializeApp();
+  }
+//admin.initializeApp();
 const db = admin.firestore();
 
 // ============================================================
