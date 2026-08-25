@@ -1,7 +1,8 @@
 import 'package:flutter/material.dart';
-import 'package:flutter_map/flutter_map.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:latlong2/latlong.dart';
+import 'package:google_maps_flutter/google_maps_flutter.dart';
+import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:cloud_functions/cloud_functions.dart';
 
 import '../Config/theme.dart';
 import '../Widgets/primary_action_button.dart';
@@ -9,8 +10,6 @@ import '../Widgets/price_tag.dart';
 import '../Widgets/error_message.dart';
 import '../Widgets/morph_transition_button.dart';
 import '../Widgets/taxi_metal_poster_card.dart';
-import 'package:cloud_firestore/cloud_firestore.dart';
-import 'package:cloud_functions/cloud_functions.dart';
 import '../models/Journey_model.dart';
 import '../Widgets/journey_results_sheet.dart';
 
@@ -24,9 +23,10 @@ class HomeMapScreen extends ConsumerStatefulWidget {
 class _HomeMapScreenState extends ConsumerState<HomeMapScreen> {
   final TextEditingController _pickupController = TextEditingController();
   final TextEditingController _destinationController = TextEditingController();
-  final MapController _mapController = MapController();
+  GoogleMapController? _mapController;
   List<Journey> _journeys = [];
   bool _isSearching = false;
+  Set<Marker> _markers = {};
 
   final LatLng _kampalaCenter = const LatLng(0.3136, 32.5811);
 
@@ -158,39 +158,19 @@ class _HomeMapScreenState extends ConsumerState<HomeMapScreen> {
 
       setState(() {
         _nearbyDriverPositions = driverPositions;
+        _markers = driverPositions.map((pos) {
+          return Marker(
+            markerId: MarkerId(pos.toString()),
+            position: pos,
+            infoWindow: const InfoWindow(title: "Taxi"),
+          );
+        }).toSet();
         _isLoadingDrivers = false;
       });
     } catch (e) {
       setState(() {
         _isLoadingDrivers = false;
         _errorMessage = "Could not find journeys: $e";
-      });
-    }
-  }
-
-  Future<void> _searchNearbyTaxisC() async {
-    setState(() {
-      _isLoadingDrivers = true;
-      _errorMessage = null;
-    });
-
-    try {
-      double currentLat = _kampalaCenter.latitude;
-      double currentLng = _kampalaCenter.longitude;
-
-      await Future.delayed(const Duration(seconds: 1));
-      setState(() {
-        _nearbyDriverPositions = [
-          LatLng(currentLat + 0.003, currentLng + 0.002),
-          LatLng(currentLat - 0.002, currentLng + 0.004),
-          LatLng(currentLat + 0.001, currentLng - 0.003),
-        ];
-        _isLoadingDrivers = false;
-      });
-    } catch (e) {
-      setState(() {
-        _isLoadingDrivers = false;
-        _errorMessage = "Could not parse spatial indices: $e";
       });
     }
   }
@@ -202,64 +182,19 @@ class _HomeMapScreenState extends ConsumerState<HomeMapScreen> {
     return Scaffold(
       body: Stack(
         children: [
-          // MAP LAYER
-          FlutterMap(
-            mapController: _mapController,
-            options: MapOptions(
-              initialCenter: _kampalaCenter,
-              initialZoom: 14.5,
+          GoogleMap(
+            initialCameraPosition: CameraPosition(
+              target: _kampalaCenter,
+              zoom: 14.5,
             ),
-            children: [
-              TileLayer(
-                urlTemplate: isDark
-                    ? 'https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png'
-                    : 'https://tile.openstreetmap.org/{z}/{x}/{y}.png',
-                userAgentPackageName: 'com.smartstage.app',
-              ),
-
-              MarkerLayer(
-                markers: _nearbyDriverPositions.map((driverLatLng) {
-                  return Marker(
-                    point: driverLatLng,
-                    width: 320,
-                    height: 320,
-                    child: Column(
-                      mainAxisSize: MainAxisSize.min,
-                      children: [
-                        const TaxiMetalPosterCard(
-                          stageDeparture: "OLD TAXI PARK (MBARARA STAGE)",
-                          destination: "MBARARA",
-                          fare: "25000UGX",
-                          loadedSeats: 12,
-                          totalSeats: 14,
-                        ),
-                        const SizedBox(height: 4),
-                        Container(
-                          decoration: BoxDecoration(
-                            shape: BoxShape.circle,
-                            boxShadow: [
-                              BoxShadow(
-                                color: SmartStageColors.greenGlow,
-                                blurRadius: 18,
-                                spreadRadius: 3,
-                              ),
-                            ],
-                          ),
-                          child: const Icon(
-                            Icons.directions_car,
-                            color: SmartStageColors.electricGreen,
-                            size: 28,
-                          ),
-                        ),
-                      ],
-                    ),
-                  );
-                }).toList(),
-              ),
-            ],
+            markers: _markers,
+            onMapCreated: (controller) {
+              setState(() {
+                _mapController = controller;
+              });
+            },
           ),
 
-          // TOP SEARCH PANEL
           SafeArea(
             child: Align(
               alignment: Alignment.topCenter,
@@ -292,7 +227,6 @@ class _HomeMapScreenState extends ConsumerState<HomeMapScreen> {
                     child: Row(
                       crossAxisAlignment: CrossAxisAlignment.center,
                       children: [
-                        // DOTTED ROUTE LINE
                         Column(
                           mainAxisSize: MainAxisSize.min,
                           children: [
@@ -347,8 +281,6 @@ class _HomeMapScreenState extends ConsumerState<HomeMapScreen> {
                           ],
                         ),
                         const SizedBox(width: 16),
-
-                        // INPUT FIELDS
                         Expanded(
                           child: Column(
                             mainAxisSize: MainAxisSize.min,
@@ -417,7 +349,6 @@ class _HomeMapScreenState extends ConsumerState<HomeMapScreen> {
             ),
           ),
 
-          // BOTTOM PANEL
           Align(
             alignment: Alignment.bottomCenter,
             child: Container(
@@ -448,53 +379,62 @@ class _HomeMapScreenState extends ConsumerState<HomeMapScreen> {
                       ],
                     ),
                     padding: const EdgeInsets.only(bottom: 24, top: 12),
-                    child: Column(
-                      mainAxisSize: MainAxisSize.min,
-                      children: [
-                        Container(
-                          width: 36,
-                          height: 4,
-                          decoration: BoxDecoration(
-                            color: isDark
-                                ? SmartStageColors.greyDark
-                                : SmartStageColors.greyLight,
-                            borderRadius: BorderRadius.circular(2),
+                    child: SingleChildScrollView(
+                      child: Column(
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                          Container(
+                            width: 36,
+                            height: 4,
+                            decoration: BoxDecoration(
+                              color: isDark
+                                  ? SmartStageColors.greyDark
+                                  : SmartStageColors.greyLight,
+                              borderRadius: BorderRadius.circular(2),
+                            ),
                           ),
-                        ),
-                        const SizedBox(height: 16),
-                        Padding(
-                          padding: const EdgeInsets.symmetric(horizontal: 24),
-                          child: Row(
-                            mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                            children: [
-                              Text(
-                                "Available Taxis Nearby",
-                                style: TextStyle(
-                                  fontWeight: FontWeight.bold,
-                                  fontSize: 16,
-                                  color: isDark
-                                      ? SmartStageColors.white
-                                      : SmartStageColors.deepNavy,
+                          const SizedBox(height: 16),
+                          Padding(
+                            padding: const EdgeInsets.symmetric(horizontal: 24),
+                            child: Row(
+                              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                              children: [
+                                Text(
+                                  "Available Taxis Nearby",
+                                  style: TextStyle(
+                                    fontWeight: FontWeight.bold,
+                                    fontSize: 16,
+                                    color: isDark
+                                        ? SmartStageColors.white
+                                        : SmartStageColors.deepNavy,
+                                  ),
                                 ),
-                              ),
-                              Text(
-                                "${_nearbyDriverPositions.length} Taxis Found",
-                                style: TextStyle(
-                                  color: SmartStageColors.electricGreen,
-                                  fontSize: 13,
-                                  fontWeight: FontWeight.w600,
+                                Text(
+                                  "${_nearbyDriverPositions.length} Taxis Found",
+                                  style: TextStyle(
+                                    color: SmartStageColors.electricGreen,
+                                    fontSize: 13,
+                                    fontWeight: FontWeight.w600,
+                                  ),
                                 ),
-                              ),
-                            ],
+                              ],
+                            ),
                           ),
-                        ),
-                        const SizedBox(height: 16),
-                        MorphingActionButton(
-                          onScanningStarted: () {
-                            _searchJourneys();
-                          },
-                        ),
-                      ],
+                          const SizedBox(height: 16),
+                          SizedBox(
+                            height: 60,
+                            width: double.infinity,
+                            child: Padding(
+                              padding: const EdgeInsets.symmetric(horizontal: 24),
+                              child: MorphingActionButton(
+                                onScanningStarted: () {
+                                  _searchJourneys();
+                                },
+                              ),
+                            ),
+                          ),
+                        ],
+                      ),
                     ),
                   ),
                 ],
