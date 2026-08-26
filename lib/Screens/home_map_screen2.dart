@@ -3,7 +3,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:google_maps_flutter/google_maps_flutter.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:cloud_functions/cloud_functions.dart';
-
+import '../Screens/assistant_screen.dart';
 import '../Config/theme.dart';
 import '../Widgets/primary_action_button.dart';
 import '../Widgets/price_tag.dart';
@@ -443,6 +443,35 @@ class _HomeMapScreenState extends ConsumerState<HomeMapScreen> {
           ),
         ],
       ),
+      //floating button fo AI assistant
+      floatingActionButton: Container(
+        decoration: BoxDecoration(
+          borderRadius: BorderRadius.circular(30),
+          boxShadow: [
+            BoxShadow(
+              color: const Color(0xFF7B2FF7).withOpacity(0.5),
+              blurRadius: 20,
+              spreadRadius: 2,
+            ),
+          ],
+        ),
+        child: FloatingActionButton(
+          onPressed: () {
+            Navigator.push(
+              context,
+              MaterialPageRoute(
+                builder: (context) => const AssistantScreen(),
+              ),
+            );
+          },
+          backgroundColor: const Color(0xFF7B2FF7),
+          child: const Icon(
+            Icons.chat_bubble_outline,
+            color: Color(0xFFFFB800),
+          ),
+        ),
+      ),
+      //end of floating AI assistant
     );
   }
 

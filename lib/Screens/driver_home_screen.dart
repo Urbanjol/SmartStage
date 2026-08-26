@@ -46,7 +46,7 @@ class _DriverHomeScreenState extends ConsumerState<DriverHomeScreen> {
   Future<void> _loadDriverData() async {
     try {
       final doc = await FirebaseFirestore.instance
-          .collection('matatus')
+          .collection('taxis')
           .doc(widget.matatuId)
           .get();
 

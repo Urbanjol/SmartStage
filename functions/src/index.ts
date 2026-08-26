@@ -2,6 +2,7 @@ import * as functions from "firebase-functions";
 import * as admin from "firebase-admin";
 export * from "./escrow_functions";
 export * from "./chat_functions";
+export * from "./assistant_functions";
 
 if (admin.apps.length === 0) {
   admin.initializeApp();
@@ -78,7 +79,7 @@ export const findJourney = functions.https.onCall(async (data, context) => {
     return { journeys: [], message: "No stages found within walking distance" };
   }
 
-  const matatusSnapshot = await db.collection("matatus")
+  const matatusSnapshot = await db.collection("taxis")
     .where("status", "in", ["LOADING", "EN_ROUTE"])
     .get();
   const matatus: any[] = [];
@@ -164,7 +165,7 @@ export const updateMatatuLocation = functions.https.onCall(async (data, context)
   if (seats_available !== undefined) updateData.seats_available = seats_available;
   if (status !== undefined) updateData.status = status;
 
-  await db.collection("matatus").doc(matatu_id).update(updateData);
+  await db.collection("taxis").doc(matatu_id).update(updateData);
 
   if (driver_id) {
     await db.collection("users").doc(driver_id).update({
