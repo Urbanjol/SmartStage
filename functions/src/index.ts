@@ -57,9 +57,9 @@ interface AddStageInput {
 // ============================================================
 // FUNCTION 1: FIND JOURNEY
 // ============================================================
-export const findJourney = functions.https.onCall(async (request) => {
-  const data = request.data as FindJourneyInput;
-  const { origin, destination, preference } = data;
+export const findJourney = functions.https.onCall(async (data, context) => {
+  //const data = request.data as FindJourneyInput;
+  const { origin, destination, preference } = data as FindJourneyInput;
 
   if (!origin || !destination) {
     throw new functions.https.HttpsError("invalid-argument", "Origin and destination required");
@@ -146,9 +146,9 @@ export const findJourney = functions.https.onCall(async (request) => {
 // ============================================================
 // FUNCTION 2: UPDATE MATATU LOCATION
 // ============================================================
-export const updateMatatuLocation = functions.https.onCall(async (request) => {
-  const data = request.data as UpdateLocationInput;
-  const { matatu_id, driver_id, location, speed, heading, seats_available, status } = data;
+export const updateMatatuLocation = functions.https.onCall(async (data, context) => {
+  //const data = request.data as UpdateLocationInput;
+  const { matatu_id, driver_id, location, speed, heading, seats_available, status } = data as UpdateLocationInput;
 
   if (!matatu_id || !location) {
     throw new functions.https.HttpsError("invalid-argument", "matatu_id and location required");
@@ -179,9 +179,9 @@ export const updateMatatuLocation = functions.https.onCall(async (request) => {
 // ============================================================
 // FUNCTION 3: UPDATE SEAT STATUS
 // ============================================================
-export const updateSeatStatus = functions.https.onCall(async (request) => {
-  const data = request.data as UpdateSeatStatusInput;
-  const { matatu_id, seat_state } = data;
+export const updateSeatStatus = functions.https.onCall(async (data, context) => {
+  //const data = request.data as UpdateSeatStatusInput;
+  const { matatu_id, seat_state } = data as UpdateSeatStatusInput;
 
   const validStates = ["space_available", "filling_up", "full"];
   if (!validStates.includes(seat_state)) {
@@ -199,9 +199,9 @@ export const updateSeatStatus = functions.https.onCall(async (request) => {
 // ============================================================
 // FUNCTION 4: CREATE BOOKING
 // ============================================================
-export const createBooking = functions.https.onCall(async (request) => {
-  const data = request.data as CreateBookingInput;
-  const { passenger_id, matatu_id, origin_stage, destination_stage, seats, fare, booking_type } = data;
+export const createBooking = functions.https.onCall(async (data, context) => {
+  //const data = request.data as CreateBookingInput;
+  const { passenger_id, matatu_id, origin_stage, destination_stage, seats, fare, booking_type } = data as CreateBookingInput;
 
   if (!passenger_id || !matatu_id) {
     throw new functions.https.HttpsError("invalid-argument", "passenger_id and matatu_id required");
@@ -227,9 +227,9 @@ export const createBooking = functions.https.onCall(async (request) => {
 // ============================================================
 // FUNCTION 5: ADD STAGE
 // ============================================================
-export const addStage = functions.https.onCall(async (request) => {
-  const data = request.data as AddStageInput;
-  const { name, location, added_by } = data;
+export const addStage = functions.https.onCall(async (data, context) => {
+  //const data = request.data as AddStageInput;
+  const { name, location, added_by } = data as AddStageInput;
 
   if (!name || !location) {
     throw new functions.https.HttpsError("invalid-argument", "name and location required");

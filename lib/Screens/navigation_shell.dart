@@ -5,7 +5,7 @@ import 'package:cloud_firestore/cloud_firestore.dart';
 import '../Config/theme.dart';
 import '../Screens/nav_provider.dart';
 import '../Screens/home_map_screen2.dart';
-import '../Screens/private_booking.dart';
+import '../Screens/privateHireScreen.dart';
 import '../Screens/profile_screen.dart';
 import '../Screens/driver_home_screen.dart';
 

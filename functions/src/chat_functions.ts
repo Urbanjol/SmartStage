@@ -30,9 +30,9 @@ interface MarkReadInput {
 // ============================================================
 // CREATE CHAT ROOM
 // ============================================================
-export const createChat = functions.https.onCall(async (request) => {
-  const data = request.data as CreateChatInput;
-  const { booking_id, passenger_id, driver_id } = data;
+export const createChat = functions.https.onCall(async (data, context) => {
+  //const data = request.data as CreateChatInput;
+  const { booking_id, passenger_id, driver_id } = data as CreateChatInput;
 
   if (!booking_id || !passenger_id || !driver_id) {
     throw new functions.https.HttpsError(
@@ -92,9 +92,9 @@ export const createChat = functions.https.onCall(async (request) => {
 // ============================================================
 // SEND MESSAGE
 // ============================================================
-export const sendMessage = functions.https.onCall(async (request) => {
-  const data = request.data as SendMessageInput;
-  const { chat_id, sender_id, content, message_type } = data;
+export const sendMessage = functions.https.onCall(async (data, context) => {
+  //const data = request.data as SendMessageInput;
+  const { chat_id, sender_id, content, message_type } = data as SendMessageInput;
 
   if (!chat_id || !sender_id || !content) {
     throw new functions.https.HttpsError(
@@ -184,9 +184,9 @@ export const sendMessage = functions.https.onCall(async (request) => {
 // ============================================================
 // MARK MESSAGES READ
 // ============================================================
-export const markMessagesRead = functions.https.onCall(async (request) => {
-  const data = request.data as MarkReadInput;
-  const { chat_id, user_id } = data;
+export const markMessagesRead = functions.https.onCall(async (data, context) => {
+  //const data = request.data as MarkReadInput;
+  const { chat_id, user_id } = data as MarkReadInput;
 
   if (!chat_id || !user_id) {
     throw new functions.https.HttpsError(
@@ -237,9 +237,9 @@ export const markMessagesRead = functions.https.onCall(async (request) => {
 // ============================================================
 // GET CHAT DETAILS
 // ============================================================
-export const getChatDetails = functions.https.onCall(async (request) => {
-  const data = request.data as { chat_id: string };
-  const { chat_id } = data;
+export const getChatDetails = functions.https.onCall(async (data, context) => {
+  //const data = request.data as { chat_id: string };
+  const { chat_id } = data as { chat_id: string };
 
   if (!chat_id) {
     throw new functions.https.HttpsError(

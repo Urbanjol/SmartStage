@@ -27,9 +27,9 @@ interface RefundEscrowInput {
 // ============================================================
 // CREATE ESCROW
 // ============================================================
-export const createEscrow = functions.https.onCall(async (request) => {
-  const data = request.data as CreateEscrowInput;
-  const { booking_id, passenger_id, driver_id, amount } = data;
+export const createEscrow = functions.https.onCall(async (data, context) => {
+  //const data = request.data as CreateEscrowInput;
+  const { booking_id, passenger_id, driver_id, amount } = data as CreateEscrowInput;
 
   if (!booking_id || !passenger_id || !driver_id || !amount) {
     throw new functions.https.HttpsError(
@@ -121,9 +121,9 @@ export const createEscrow = functions.https.onCall(async (request) => {
 // ============================================================
 // RELEASE ESCROW
 // ============================================================
-export const releaseEscrow = functions.https.onCall(async (request) => {
-  const data = request.data as ReleaseEscrowInput;
-  const { escrow_id } = data;
+export const releaseEscrow = functions.https.onCall(async (data, context) => {
+  //const data = request.data as ReleaseEscrowInput;
+  const { escrow_id } = data as ReleaseEscrowInput;
 
   if (!escrow_id) {
     throw new functions.https.HttpsError(
@@ -152,7 +152,7 @@ export const releaseEscrow = functions.https.onCall(async (request) => {
   }
 
   // Verify caller is passenger
-  if (request.auth?.uid !== escrowData?.passenger_id) {
+  if (context.auth?.uid !== escrowData?.passenger_id) {
     throw new functions.https.HttpsError(
       "permission-denied",
       "Only passenger can release escrow"
@@ -163,7 +163,7 @@ export const releaseEscrow = functions.https.onCall(async (request) => {
   await escrowRef.update({
     status: "RELEASED",
     released_at: admin.firestore.FieldValue.serverTimestamp(),
-    released_by: request.auth?.uid,
+    released_by: context.auth?.uid,
     updated_at: admin.firestore.FieldValue.serverTimestamp(),
   });
 
@@ -192,9 +192,9 @@ export const releaseEscrow = functions.https.onCall(async (request) => {
 // ============================================================
 // REFUND ESCROW
 // ============================================================
-export const refundEscrow = functions.https.onCall(async (request) => {
-  const data = request.data as RefundEscrowInput;
-  const { escrow_id } = data;
+export const refundEscrow = functions.https.onCall(async (data, context) => {
+  //const data = request.data as RefundEscrowInput;
+  const { escrow_id } = data as RefundEscrowInput;
 
   if (!escrow_id) {
     throw new functions.https.HttpsError(
@@ -223,8 +223,8 @@ export const refundEscrow = functions.https.onCall(async (request) => {
   }
 
   // Verify caller is passenger or system
-  if (request.auth?.uid !== escrowData?.passenger_id &&
-      request.auth?.uid !== escrowData?.driver_id) {
+  if (context.auth?.uid !== escrowData?.passenger_id &&
+      context.auth?.uid !== escrowData?.driver_id) {
     throw new functions.https.HttpsError(
       "permission-denied",
       "Not authorized to refund"
@@ -235,7 +235,7 @@ export const refundEscrow = functions.https.onCall(async (request) => {
   await escrowRef.update({
     status: "REFUNDED",
     refunded_at: admin.firestore.FieldValue.serverTimestamp(),
-    refunded_by: request.auth?.uid,
+    refunded_by: context.auth?.uid,
     updated_at: admin.firestore.FieldValue.serverTimestamp(),
   });
 
