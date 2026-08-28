@@ -1,8 +1,8 @@
 import * as functions from "firebase-functions";
 import * as admin from "firebase-admin";
 
-if (admin.apps.length == 0){
- admin.initializeApp();
+if (admin.apps.length === 0) {
+  admin.initializeApp();
 }
 const db = admin.firestore();
 
@@ -28,13 +28,12 @@ interface RefundEscrowInput {
 // CREATE ESCROW
 // ============================================================
 export const createEscrow = functions.https.onCall(async (data, context) => {
-  //const data = request.data as CreateEscrowInput;
-  const { booking_id, passenger_id, driver_id, amount } = data as CreateEscrowInput;
+  const { booking_id, passenger_id, driver_id, amount } = (data || {}) as Partial<CreateEscrowInput>;
 
-  if (!booking_id || !passenger_id || !driver_id || !amount) {
+  if (!booking_id || !passenger_id || !driver_id || typeof amount !== "number") {
     throw new functions.https.HttpsError(
       "invalid-argument",
-      "booking_id, passenger_id, driver_id, and amount required"
+      "booking_id, passenger_id, driver_id, and valid amount required"
     );
   }
 
@@ -122,8 +121,7 @@ export const createEscrow = functions.https.onCall(async (data, context) => {
 // RELEASE ESCROW
 // ============================================================
 export const releaseEscrow = functions.https.onCall(async (data, context) => {
-  //const data = request.data as ReleaseEscrowInput;
-  const { escrow_id } = data as ReleaseEscrowInput;
+  const { escrow_id } = (data || {}) as Partial<ReleaseEscrowInput>;
 
   if (!escrow_id) {
     throw new functions.https.HttpsError(
@@ -168,20 +166,24 @@ export const releaseEscrow = functions.https.onCall(async (data, context) => {
   });
 
   // Update booking
-  await db.collection("bookings").doc(escrowData?.booking_id).update({
-    payment_status: "PAID",
-  });
+  if (escrowData?.booking_id) {
+    await db.collection("bookings").doc(escrowData.booking_id).update({
+      payment_status: "PAID",
+    });
+  }
 
   // Notify driver
-  await db.collection("notifications").add({
-    user_id: escrowData?.driver_id,
-    title: "Payment Released",
-    body: `UGX ${escrowData?.amount} has been released to you`,
-    type: "ESCROW_RELEASED",
-    booking_id: escrowData?.booking_id,
-    read: false,
-    created_at: admin.firestore.FieldValue.serverTimestamp(),
-  });
+  if (escrowData?.driver_id) {
+    await db.collection("notifications").add({
+      user_id: escrowData.driver_id,
+      title: "Payment Released",
+      body: `UGX ${escrowData.amount} has been released to you`,
+      type: "ESCROW_RELEASED",
+      booking_id: escrowData.booking_id,
+      read: false,
+      created_at: admin.firestore.FieldValue.serverTimestamp(),
+    });
+  }
 
   return {
     success: true,
@@ -193,8 +195,7 @@ export const releaseEscrow = functions.https.onCall(async (data, context) => {
 // REFUND ESCROW
 // ============================================================
 export const refundEscrow = functions.https.onCall(async (data, context) => {
-  //const data = request.data as RefundEscrowInput;
-  const { escrow_id } = data as RefundEscrowInput;
+  const { escrow_id } = (data || {}) as Partial<RefundEscrowInput>;
 
   if (!escrow_id) {
     throw new functions.https.HttpsError(
@@ -222,7 +223,7 @@ export const refundEscrow = functions.https.onCall(async (data, context) => {
     );
   }
 
-  // Verify caller is passenger or system
+  // Verify caller is passenger or driver
   if (context.auth?.uid !== escrowData?.passenger_id &&
       context.auth?.uid !== escrowData?.driver_id) {
     throw new functions.https.HttpsError(
@@ -240,31 +241,37 @@ export const refundEscrow = functions.https.onCall(async (data, context) => {
   });
 
   // Update booking
-  await db.collection("bookings").doc(escrowData?.booking_id).update({
-    payment_status: "REFUNDED",
-    status: "cancelled",
-  });
+  if (escrowData?.booking_id) {
+    await db.collection("bookings").doc(escrowData.booking_id).update({
+      payment_status: "REFUNDED",
+      status: "cancelled",
+    });
+  }
 
   // Notify both parties
-  await db.collection("notifications").add({
-    user_id: escrowData?.driver_id,
-    title: "Escrow Refunded",
-    body: `Payment of UGX ${escrowData?.amount} has been refunded`,
-    type: "ESCROW_REFUNDED",
-    booking_id: escrowData?.booking_id,
-    read: false,
-    created_at: admin.firestore.FieldValue.serverTimestamp(),
-  });
+  if (escrowData?.driver_id) {
+    await db.collection("notifications").add({
+      user_id: escrowData.driver_id,
+      title: "Escrow Refunded",
+      body: `Payment of UGX ${escrowData.amount} has been refunded`,
+      type: "ESCROW_REFUNDED",
+      booking_id: escrowData.booking_id,
+      read: false,
+      created_at: admin.firestore.FieldValue.serverTimestamp(),
+    });
+  }
 
-  await db.collection("notifications").add({
-    user_id: escrowData?.passenger_id,
-    title: "Escrow Refunded",
-    body: `Your payment of UGX ${escrowData?.amount} has been refunded`,
-    type: "ESCROW_REFUNDED",
-    booking_id: escrowData?.booking_id,
-    read: false,
-    created_at: admin.firestore.FieldValue.serverTimestamp(),
-  });
+  if (escrowData?.passenger_id) {
+    await db.collection("notifications").add({
+      user_id: escrowData.passenger_id,
+      title: "Escrow Refunded",
+      body: `Your payment of UGX ${escrowData.amount} has been refunded`,
+      type: "ESCROW_REFUNDED",
+      booking_id: escrowData.booking_id,
+      read: false,
+      created_at: admin.firestore.FieldValue.serverTimestamp(),
+    });
+  }
 
   return {
     success: true,

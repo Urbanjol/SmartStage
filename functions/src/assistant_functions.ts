@@ -7,12 +7,19 @@ if (admin.apps.length === 0) {
 }
 
 const db = admin.firestore();
-const GROQ_API_KEY = "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";
+
+// Fetch API key from Firebase Environment Config (Recommended) or fallback to process.env
+const GROQ_API_KEY = functions.config().groq?.key || process.env.GROQ_API_KEY || "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";
+
+interface AssistantInput {
+  question: string;
+}
 
 export const smartAssistant = functions.https.onCall(async (data, ctx) => {
-  const question = data.question as string;
+  // Safe extraction with fallback empty object
+  const { question } = (data || {}) as Partial<AssistantInput>;
 
-  if (!question) {
+  if (!question || typeof question !== "string") {
     throw new functions.https.HttpsError("invalid-argument", "Question required");
   }
 

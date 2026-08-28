@@ -1,13 +1,13 @@
 import * as functions from "firebase-functions";
 import * as admin from "firebase-admin";
+
 export * from "./escrow_functions";
 export * from "./chat_functions";
 export * from "./assistant_functions";
 
 if (admin.apps.length === 0) {
   admin.initializeApp();
-  }
-//admin.initializeApp();
+}
 const db = admin.firestore();
 
 // ============================================================
@@ -59,11 +59,10 @@ interface AddStageInput {
 // FUNCTION 1: FIND JOURNEY
 // ============================================================
 export const findJourney = functions.https.onCall(async (data, context) => {
-  //const data = request.data as FindJourneyInput;
-  const { origin, destination, preference } = data as FindJourneyInput;
+  const { origin, destination, preference } = (data || {}) as Partial<FindJourneyInput>;
 
-  if (!origin || !destination) {
-    throw new functions.https.HttpsError("invalid-argument", "Origin and destination required");
+  if (!origin || typeof origin.lat !== "number" || typeof origin.lng !== "number" || !destination) {
+    throw new functions.https.HttpsError("invalid-argument", "Valid origin (lat, lng) and destination required");
   }
 
   const stagesSnapshot = await db.collection("stages").get();
@@ -71,7 +70,11 @@ export const findJourney = functions.https.onCall(async (data, context) => {
   stagesSnapshot.forEach(doc => stages.push({ id: doc.id, ...doc.data() }));
 
   const nearbyStages = stages.filter(s => {
-    const dist = haversineDistance(origin.lat, origin.lng, s.location._lat || s.location.lat, s.location._lng || s.location.lng);
+    const stageLat = s.location?._lat ?? s.location?.lat;
+    const stageLng = s.location?._lng ?? s.location?.lng;
+    if (stageLat == null || stageLng == null) return false;
+
+    const dist = haversineDistance(origin.lat, origin.lng, stageLat, stageLng);
     return dist <= 2.0;
   });
 
@@ -88,8 +91,8 @@ export const findJourney = functions.https.onCall(async (data, context) => {
   const journeys: any[] = [];
 
   for (const startStage of nearbyStages) {
-    const stageLat = startStage.location._lat || startStage.location.lat;
-    const stageLng = startStage.location._lng || startStage.location.lng;
+    const stageLat = startStage.location._lat ?? startStage.location.lat;
+    const stageLng = startStage.location._lng ?? startStage.location.lng;
     const walkToStart = haversineDistance(origin.lat, origin.lng, stageLat, stageLng) / 5.0;
     const walkMinutes = Math.ceil(walkToStart * 60);
 
@@ -148,11 +151,10 @@ export const findJourney = functions.https.onCall(async (data, context) => {
 // FUNCTION 2: UPDATE MATATU LOCATION
 // ============================================================
 export const updateMatatuLocation = functions.https.onCall(async (data, context) => {
-  //const data = request.data as UpdateLocationInput;
-  const { matatu_id, driver_id, location, speed, heading, seats_available, status } = data as UpdateLocationInput;
+  const { matatu_id, driver_id, location, speed, heading, seats_available, status } = (data || {}) as Partial<UpdateLocationInput>;
 
-  if (!matatu_id || !location) {
-    throw new functions.https.HttpsError("invalid-argument", "matatu_id and location required");
+  if (!matatu_id || !location || typeof location.lat !== "number" || typeof location.lng !== "number") {
+    throw new functions.https.HttpsError("invalid-argument", "matatu_id and valid location (lat, lng) required");
   }
 
   const updateData: any = {
@@ -181,15 +183,14 @@ export const updateMatatuLocation = functions.https.onCall(async (data, context)
 // FUNCTION 3: UPDATE SEAT STATUS
 // ============================================================
 export const updateSeatStatus = functions.https.onCall(async (data, context) => {
-  //const data = request.data as UpdateSeatStatusInput;
-  const { matatu_id, seat_state } = data as UpdateSeatStatusInput;
+  const { matatu_id, seat_state } = (data || {}) as Partial<UpdateSeatStatusInput>;
 
   const validStates = ["space_available", "filling_up", "full"];
-  if (!validStates.includes(seat_state)) {
-    throw new functions.https.HttpsError("invalid-argument", "Invalid seat state");
+  if (!matatu_id || !seat_state || !validStates.includes(seat_state)) {
+    throw new functions.https.HttpsError("invalid-argument", "Valid matatu_id and seat_state required");
   }
 
-  await db.collection("matatus").doc(matatu_id).update({
+  await db.collection("taxis").doc(matatu_id).update({
     seat_state: seat_state,
     seat_state_updated: admin.firestore.FieldValue.serverTimestamp()
   });
@@ -201,8 +202,7 @@ export const updateSeatStatus = functions.https.onCall(async (data, context) => 
 // FUNCTION 4: CREATE BOOKING
 // ============================================================
 export const createBooking = functions.https.onCall(async (data, context) => {
-  //const data = request.data as CreateBookingInput;
-  const { passenger_id, matatu_id, origin_stage, destination_stage, seats, fare, booking_type } = data as CreateBookingInput;
+  const { passenger_id, matatu_id, origin_stage, destination_stage, seats, fare, booking_type } = (data || {}) as Partial<CreateBookingInput>;
 
   if (!passenger_id || !matatu_id) {
     throw new functions.https.HttpsError("invalid-argument", "passenger_id and matatu_id required");
@@ -226,14 +226,50 @@ export const createBooking = functions.https.onCall(async (data, context) => {
 });
 
 // ============================================================
-// FUNCTION 5: ADD STAGE
+// FUNCTION 5: ADD STAGE we have two functions, one is changed another is for backup
 // ============================================================
 export const addStage = functions.https.onCall(async (data, context) => {
-  //const data = request.data as AddStageInput;
-  const { name, location, added_by } = data as AddStageInput;
+  const { name, location, added_by } = (data || {}) as Partial<AddStageInput>;
 
-  if (!name || !location) {
-    throw new functions.https.HttpsError("invalid-argument", "name and location required");
+  if (!name || !location || typeof location.lat !== "number" || typeof location.lng !== "number") {
+    throw new functions.https.HttpsError("invalid-argument", "name and valid location (lat, lng) required");
+  }
+
+  const nearbySnapshot = await db.collection("stages")
+    .where("location", ">=", new admin.firestore.GeoPoint(location.lat - 0.0005, location.lng - 0.0005))
+    .where("location", "<=", new admin.firestore.GeoPoint(location.lat + 0.0005, location.lng + 0.0005))
+    .get();
+
+  if (!nearbySnapshot.empty) {
+    const existingDoc = nearbySnapshot.docs[0];
+    const currentCount = existingDoc.data().verification_count || 0;
+    await existingDoc.ref.update({
+      verification_count: currentCount + 1,
+      verified: (currentCount + 1) >= 3
+    });
+    return { success: true, stage_id: existingDoc.id, created: false, verified: (currentCount + 1) >= 3 };
+  }
+
+  const stageRef = db.collection("stages").doc();
+  await stageRef.set({
+    name,
+    location: new admin.firestore.GeoPoint(location.lat, location.lng),
+    verified: false,
+    verification_count: 1,
+    added_by: added_by || "anonymous",
+    fare_board: {},
+    routes: [],
+    created_at: admin.firestore.FieldValue.serverTimestamp()
+  });
+
+  return { success: true, stage_id: stageRef.id, created: true, verified: false };
+});
+//ends here
+export const addStage1 = functions.https.onCall(async (data, context) => {
+  const { name, location, added_by } = (data || {}) as Partial<AddStageInput>;
+
+  if (!name || !location || typeof location.lat !== "number" || typeof location.lng !== "number") {
+    throw new functions.https.HttpsError("invalid-argument", "name and valid location (lat, lng) required");
   }
 
   const nearbySnapshot = await db.collection("stages")

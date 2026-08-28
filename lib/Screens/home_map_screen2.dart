@@ -12,6 +12,7 @@ import '../Widgets/morph_transition_button.dart';
 import '../Widgets/taxi_metal_poster_card.dart';
 import '../models/Journey_model.dart';
 import '../Widgets/journey_results_sheet.dart';
+import '../Screens/add_stage_screen.dart';
 
 class HomeMapScreen extends ConsumerStatefulWidget {
   const HomeMapScreen({Key? key}) : super(key: key);
@@ -194,7 +195,50 @@ class _HomeMapScreenState extends ConsumerState<HomeMapScreen> {
               });
             },
           ),
-
+        //Add new stages strt
+          SafeArea(
+            child: Align(
+              alignment: Alignment.topRight,
+              child: Padding(
+                padding: const EdgeInsets.only(top: 16, right: 16),
+                child: GestureDetector(
+                  onTap: () {
+                    Navigator.push(
+                      context,
+                      MaterialPageRoute(
+                        builder: (context) => const AddStageScreen(),
+                      ),
+                    );
+                  },
+                  child: Container(
+                    width: 48,
+                    height: 48,
+                    decoration: BoxDecoration(
+                      gradient: const LinearGradient(
+                        colors: [Color(0xFF2563EB), Color(0xFF7C3AED)],
+                        begin: Alignment.topLeft,
+                        end: Alignment.bottomRight,
+                      ),
+                      shape: BoxShape.circle,
+                      boxShadow: [
+                        BoxShadow(
+                          color: const Color(0xFF2563EB).withOpacity(0.4),
+                          blurRadius: 15,
+                          spreadRadius: 1,
+                        ),
+                      ],
+                    ),
+                    child: const Icon(
+                      Icons.add_location_alt_outlined,
+                      color: Colors.white,
+                      size: 24,
+                    ),
+                  ),
+                ),
+              ),
+            ),
+          ),
+          //end
           SafeArea(
             child: Align(
               alignment: Alignment.topCenter,

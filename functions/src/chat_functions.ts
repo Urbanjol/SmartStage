@@ -1,8 +1,8 @@
 import * as functions from "firebase-functions";
 import * as admin from "firebase-admin";
 
-if (admin.apps.length == 0){
- admin.initializeApp();
+if (admin.apps.length === 0) {
+  admin.initializeApp();
 }
 const db = admin.firestore();
 
@@ -27,12 +27,15 @@ interface MarkReadInput {
   user_id: string;
 }
 
+interface GetChatDetailsInput {
+  chat_id: string;
+}
+
 // ============================================================
 // CREATE CHAT ROOM
 // ============================================================
 export const createChat = functions.https.onCall(async (data, context) => {
-  //const data = request.data as CreateChatInput;
-  const { booking_id, passenger_id, driver_id } = data as CreateChatInput;
+  const { booking_id, passenger_id, driver_id } = (data || {}) as Partial<CreateChatInput>;
 
   if (!booking_id || !passenger_id || !driver_id) {
     throw new functions.https.HttpsError(
@@ -93,17 +96,18 @@ export const createChat = functions.https.onCall(async (data, context) => {
 // SEND MESSAGE
 // ============================================================
 export const sendMessage = functions.https.onCall(async (data, context) => {
-  //const data = request.data as SendMessageInput;
-  const { chat_id, sender_id, content, message_type } = data as SendMessageInput;
+  const { chat_id, sender_id, content, message_type } = (data || {}) as Partial<SendMessageInput>;
 
-  if (!chat_id || !sender_id || !content) {
+  if (!chat_id || !sender_id || !content || typeof content !== "string") {
     throw new functions.https.HttpsError(
       "invalid-argument",
-      "chat_id, sender_id, and content required"
+      "chat_id, sender_id, and valid content required"
     );
   }
 
-  if (content.trim().length === 0) {
+  const trimmedContent = content.trim();
+
+  if (trimmedContent.length === 0) {
     throw new functions.https.HttpsError(
       "invalid-argument",
       "Message cannot be empty"
@@ -136,7 +140,7 @@ export const sendMessage = functions.https.onCall(async (data, context) => {
   const messageData = {
     chat_id,
     sender_id,
-    content: content.trim(),
+    content: trimmedContent,
     message_type: message_type || "text",
     read: false,
     created_at: admin.firestore.FieldValue.serverTimestamp(),
@@ -150,7 +154,7 @@ export const sendMessage = functions.https.onCall(async (data, context) => {
     : chatData?.passenger_id;
 
   const updateData: any = {
-    last_message: content.trim(),
+    last_message: trimmedContent,
     last_message_time: admin.firestore.FieldValue.serverTimestamp(),
     updated_at: admin.firestore.FieldValue.serverTimestamp(),
   };
@@ -167,7 +171,7 @@ export const sendMessage = functions.https.onCall(async (data, context) => {
   await db.collection("notifications").add({
     user_id: receiverId,
     title: "New Message",
-    body: content.trim().substring(0, 100),
+    body: trimmedContent.substring(0, 100),
     type: "CHAT_MESSAGE",
     chat_id,
     booking_id: chatData?.booking_id,
@@ -185,8 +189,7 @@ export const sendMessage = functions.https.onCall(async (data, context) => {
 // MARK MESSAGES READ
 // ============================================================
 export const markMessagesRead = functions.https.onCall(async (data, context) => {
-  //const data = request.data as MarkReadInput;
-  const { chat_id, user_id } = data as MarkReadInput;
+  const { chat_id, user_id } = (data || {}) as Partial<MarkReadInput>;
 
   if (!chat_id || !user_id) {
     throw new functions.https.HttpsError(
@@ -225,11 +228,13 @@ export const markMessagesRead = functions.https.onCall(async (data, context) => 
     .where("read", "==", false)
     .get();
 
-  const batch = db.batch();
-  messagesSnapshot.docs.forEach((doc) => {
-    batch.update(doc.ref, { read: true });
-  });
-  await batch.commit();
+  if (!messagesSnapshot.empty) {
+    const batch = db.batch();
+    messagesSnapshot.docs.forEach((doc) => {
+      batch.update(doc.ref, { read: true });
+    });
+    await batch.commit();
+  }
 
   return { success: true };
 });
@@ -238,8 +243,7 @@ export const markMessagesRead = functions.https.onCall(async (data, context) => 
 // GET CHAT DETAILS
 // ============================================================
 export const getChatDetails = functions.https.onCall(async (data, context) => {
-  //const data = request.data as { chat_id: string };
-  const { chat_id } = data as { chat_id: string };
+  const { chat_id } = (data || {}) as Partial<GetChatDetailsInput>;
 
   if (!chat_id) {
     throw new functions.https.HttpsError(
