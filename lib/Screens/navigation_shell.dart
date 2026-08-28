@@ -8,6 +8,7 @@ import '../Screens/home_map_screen2.dart';
 import '../Screens/privateHireScreen.dart';
 import '../Screens/profile_screen.dart';
 import '../Screens/driver_home_screen.dart';
+import '../Screens/parcel_screen.dart';
 
 class NavigationShell extends ConsumerStatefulWidget {
   const NavigationShell({Key? key}) : super(key: key);
@@ -94,6 +95,7 @@ class _NavigationShellState extends ConsumerState<NavigationShell> {
 
     final List<Widget> screens = [
       const HomeMapScreen(),
+      const ParcelScreen(),
       const PrivateHireScreen(),
       const ProfileScreen(),
     ];
@@ -140,6 +142,11 @@ class _NavigationShellState extends ConsumerState<NavigationShell> {
               icon: Icon(Icons.map_outlined),
               activeIcon: Icon(Icons.map),
               label: 'Home',
+            ),
+            const BottomNavigationBarItem(
+              icon: Icon(Icons.inventory_2_outlined),
+              activeIcon: Icon(Icons.inventory_2),
+              label: 'Parcels',
             ),
             const BottomNavigationBarItem(
               icon: Icon(Icons.directions_bus_outlined),
