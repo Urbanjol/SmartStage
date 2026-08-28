@@ -1,7 +1,7 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
-import '../models/Parcel_model.dart';
+import '../models/parcel_model.dart';
 
 class ParcelState {
   final bool isLoading;

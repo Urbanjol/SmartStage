@@ -24,6 +24,7 @@ class SmartStageColors {
 
   // Glow Colors
   static const Color greenGlow = Color(0x6610B981);
+  static const Color purpleGlow = Color(0x667B2FF7);
   static const Color goldGlow = Color(0x66FFB800);
   static const Color blueGlow = Color(0x660056b3);
   static const Color whiteGlow = Color(0x66FFFFFF);

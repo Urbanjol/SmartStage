@@ -2,7 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../Config/theme.dart';
 import '../Providers/parcel_provider.dart';
-import '../models/Parcel_model.dart';
+import '../models/parcel_model.dart';
 
 class ParcelScreen extends ConsumerStatefulWidget {
   const ParcelScreen({Key? key}) : super(key: key);
