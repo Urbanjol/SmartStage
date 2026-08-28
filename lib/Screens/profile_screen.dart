@@ -60,6 +60,58 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
   Future<void> _logout() async {
     await FirebaseAuth.instance.signOut();
   }
+  //new logout dialog box function
+  void _showLogoutDialog() {
+    showDialog(
+      context: context,
+      builder: (context) => AlertDialog(
+        backgroundColor: Theme.of(context).brightness == Brightness.dark
+            ? SmartStageColors.navyCard
+            : Colors.white,
+        shape: RoundedRectangleBorder(
+          borderRadius: BorderRadius.circular(20),
+        ),
+        title: const Text(
+          'LOGOUT',
+          style: TextStyle(
+            fontWeight: FontWeight.bold,
+            color: SmartStageColors.deepNavy,
+          ),
+        ),
+        content: const Text(
+          'Are you sure you want to logout?',
+          style: TextStyle(
+            color: SmartStageColors.greyDark,
+          ),
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context),
+            child: const Text(
+              'CANCEL',
+              style: TextStyle(
+                color: SmartStageColors.greyMid,
+              ),
+            ),
+          ),
+          TextButton(
+            onPressed: () {
+              Navigator.pop(context);
+              _logout();
+            },
+            child: const Text(
+              'LOGOUT',
+              style: TextStyle(
+                color: SmartStageColors.red,
+                fontWeight: FontWeight.bold,
+              ),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+  //end of function
 
   @override
   Widget build(BuildContext context) {
@@ -278,7 +330,7 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
 
             // Logout Button
             GestureDetector(
-              onTap: _logout,
+              onTap: _showLogoutDialog, //logout
               child: Container(
                 padding: const EdgeInsets.symmetric(vertical: 16),
                 decoration: BoxDecoration(
