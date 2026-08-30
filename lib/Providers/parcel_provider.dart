@@ -8,12 +8,14 @@ class ParcelState {
   final String? errorMessage;
   final List<ParcelModel> myParcels;
   final ParcelModel? trackedParcel;
+  final List<ParcelModel> availableParcels;
 
   const ParcelState({
     this.isLoading = false,
     this.errorMessage,
     this.myParcels = const [],
     this.trackedParcel,
+    this.availableParcels = const [],
   });
 
   ParcelState copyWith({
@@ -21,12 +23,14 @@ class ParcelState {
     String? errorMessage,
     List<ParcelModel>? myParcels,
     ParcelModel? trackedParcel,
+    List<ParcelModel>? availableParcels,
   }) {
     return ParcelState(
       isLoading: isLoading ?? this.isLoading,
       errorMessage: errorMessage ?? this.errorMessage,
       myParcels: myParcels ?? this.myParcels,
       trackedParcel: trackedParcel ?? this.trackedParcel,
+      availableParcels: availableParcels ?? this.availableParcels,
     );
   }
 }
@@ -111,6 +115,45 @@ class ParcelNotifier extends Notifier<ParcelState> {
       );
     }
   }
+  //load available parcels
+  Future<void> loadAvailableParcels() async {
+    state = state.copyWith(isLoading: true);
+
+    try {
+      final snapshot = await _firestore
+          .collection('parcels')
+          .where('status', isEqualTo: 'created')
+          .get();
+
+      final parcels = snapshot.docs
+          .map((doc) => ParcelModel.fromMap(
+        doc.data() as Map<String, dynamic>,
+        doc.id,
+      ))
+          .toList();
+
+      state = state.copyWith(isLoading: false, availableParcels: parcels);
+    } catch (e) {
+      state = state.copyWith(
+        isLoading: false,
+        errorMessage: 'Failed to load parcels: $e',
+      );
+    }
+  }
+
+  Future<void> acceptParcel(String parcelId) async {
+    try {
+      await _firestore.collection('parcels').doc(parcelId).update({
+        'taxi_id': _currentUserId,
+        'status': 'picked_up',
+      });
+    } catch (e) {
+      state = state.copyWith(
+        errorMessage: 'Failed to accept parcel: $e',
+      );
+    }
+  }
+  ///////////////////////
 
   Future<void> trackParcel(String trackingCode) async {
     state = state.copyWith(isLoading: true);

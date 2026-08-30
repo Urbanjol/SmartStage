@@ -4,6 +4,7 @@ class JourneyLeg {
   final String stageId;
   final String matatuPlate;
   final String matatuId;
+  final String vehicleType;
   final String departure;
   final String arrival;
   final String destination;
@@ -16,6 +17,7 @@ class JourneyLeg {
     required this.stageId,
     required this.matatuPlate,
     required this.matatuId,
+    required this.vehicleType,
     required this.departure,
     required this.arrival,
     required this.destination,
@@ -30,12 +32,25 @@ class JourneyLeg {
       stageId: json['stage_id'] ?? '',
       matatuPlate: json['matatu_plate'] ?? '',
       matatuId: json['matatu_id'] ?? '',
+      vehicleType: json['vehicle_type'] ?? 'taxi',
       departure: json['departure'] ?? '',
       arrival: json['arrival'] ?? '',
       destination: json['destination'] ?? '',
       fare: json['fare'] ?? 0,
       space: json['space'] ?? 'Unknown',
     );
+  }
+
+  String get vehicleIcon {
+    switch (vehicleType) {
+      case 'e_bus':
+        return '🚌';
+      case 'bus':
+        return '🚍';
+      case 'taxi':
+      default:
+        return '🚐';
+    }
   }
 }
 

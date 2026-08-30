@@ -2,8 +2,12 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:smart_stage/Screens/help_and_support.dart';
+import 'package:smart_stage/Screens/settings_screen.dart';
 import '../Config/theme.dart';
 import 'notification_screen.dart';
+import 'trip_history_screen.dart';
+import 'payment_method.dart';
 //import 'notifications_screen.dart';
 
 class ProfileScreen extends ConsumerStatefulWidget {
@@ -294,6 +298,13 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
                     title: 'Trip History',
                     onTap: () {
                       // Navigate to trip history
+                      Navigator.push(
+                          context,
+                          MaterialPageRoute(
+                          builder: (context) =>
+                      const TripHistoryScreen(),
+                      ),
+                      );
                     },
                   ),
                   _buildDivider(isDark),
@@ -303,6 +314,13 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
                     title: 'Payment Methods',
                     onTap: () {
                       // Navigate to payment methods
+                      Navigator.push(
+                        context,
+                        MaterialPageRoute(
+                          builder: (context) =>
+                          const PaymentMethodsScreen(),
+                        ),
+                      );
                     },
                   ),
                   _buildDivider(isDark),
@@ -312,6 +330,13 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
                     title: 'Settings',
                     onTap: () {
                       // Navigate to settings
+                      Navigator.push(
+                        context,
+                        MaterialPageRoute(
+                          builder: (context) =>
+                          const SettingsScreen(),
+                        ),
+                      );
                     },
                   ),
                   _buildDivider(isDark),
@@ -321,6 +346,13 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
                     title: 'Help & Support',
                     onTap: () {
                       // Navigate to help
+                      Navigator.push(
+                        context,
+                        MaterialPageRoute(
+                          builder: (context) =>
+                          const HelpSupportScreen(),
+                        ),
+                      );
                     },
                   ),
                 ],

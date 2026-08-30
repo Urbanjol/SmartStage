@@ -1,6 +1,15 @@
 import 'package:flutter/material.dart';
 
 class SmartStageColors {
+  // Blue White Theme
+  static const Color primaryBlue = Color(0xFF2563EB);
+  static const Color deepBlue = Color(0xFF1D4ED8);
+  static const Color lightBlue = Color(0xFF48CAE4);
+  static const Color lavender = Color(0xFFB197FC);
+  static const Color offWhite = Color(0xFFF8FAFC);
+  static const Color darkNavy = Color(0xFF0A192F);
+  static const Color goldAccent = Color(0xFFFFB800);
+
   // Primary Palette
   static const Color deepNavy = Color(0xFF0A192F);
   static const Color navyCard = Color(0xFF172A45);

@@ -122,7 +122,7 @@ class _NavigationShellState extends ConsumerState<NavigationShell> {
             ref.read(navigationIndexProvider.notifier).state = index;
           },
           type: BottomNavigationBarType.fixed,
-          selectedItemColor: SmartStageColors.electricGreen,
+          selectedItemColor: SmartStageColors.primaryBlue,
           unselectedItemColor: Theme.of(context).brightness == Brightness.dark
               ? SmartStageColors.greyDark
               : SmartStageColors.greyMid,

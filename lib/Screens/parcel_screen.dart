@@ -52,8 +52,10 @@ class _ParcelScreenState extends ConsumerState<ParcelScreen> {
         pickupController: _pickupController,
         destinationController: _destinationController,
         fareController: _fareController,
-        onCreate: () {
-          ref.read(parcelProvider.notifier).createParcel(
+        onCreate: () async {
+          final trackingCode = await ref
+              .read(parcelProvider.notifier)
+              .createParcel(
             senderName: _senderNameController.text.trim(),
             receiverName: _receiverNameController.text.trim(),
             receiverPhone: _receiverPhoneController.text.trim(),
@@ -61,7 +63,79 @@ class _ParcelScreenState extends ConsumerState<ParcelScreen> {
             destinationStage: _destinationController.text.trim(),
             fare: double.tryParse(_fareController.text.trim()) ?? 0,
           );
+
+          if (trackingCode != null && mounted) {
+            _showSuccessDialog(trackingCode);
+          }
         },
+      ),
+    );
+  }
+
+  void _showSuccessDialog(String trackingCode) {
+    showDialog(
+      context: context,
+      builder: (context) => AlertDialog(
+        backgroundColor: Theme.of(context).brightness == Brightness.dark
+            ? SmartStageColors.navyCard
+            : Colors.white,
+        shape: RoundedRectangleBorder(
+          borderRadius: BorderRadius.circular(20),
+        ),
+        title: const Text(
+          'PARCEL CREATED!',
+          style: TextStyle(
+            fontWeight: FontWeight.bold,
+            color: SmartStageColors.electricGreen,
+          ),
+        ),
+        content: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            const Text(
+              'Your parcel has been created.',
+              style: TextStyle(
+                color: SmartStageColors.greyDark,
+              ),
+            ),
+            const SizedBox(height: 12),
+            Container(
+              padding: const EdgeInsets.all(12),
+              decoration: BoxDecoration(
+                color: SmartStageColors.electricGreen.withOpacity(0.1),
+                borderRadius: BorderRadius.circular(12),
+              ),
+              child: Text(
+                trackingCode,
+                style: const TextStyle(
+                  fontSize: 14,
+                  fontWeight: FontWeight.bold,
+                  color: SmartStageColors.deepNavy,
+                ),
+              ),
+            ),
+            const SizedBox(height: 8),
+            const Text(
+              'Share this code with the receiver',
+              style: TextStyle(
+                fontSize: 12,
+                color: SmartStageColors.greyMid,
+              ),
+            ),
+          ],
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context),
+            child: const Text(
+              'OK',
+              style: TextStyle(
+                color: SmartStageColors.electricGreen,
+                fontWeight: FontWeight.bold,
+              ),
+            ),
+          ),
+        ],
       ),
     );
   }
@@ -151,7 +225,6 @@ class _ParcelScreenState extends ConsumerState<ParcelScreen> {
       ),
       body: Column(
         children: [
-          // Create Parcel Button
           Padding(
             padding: const EdgeInsets.all(16),
             child: GlowButton(
@@ -163,8 +236,6 @@ class _ParcelScreenState extends ConsumerState<ParcelScreen> {
             ),
           ),
           const SizedBox(height: 10),
-
-          // Parcel List
           Expanded(
             child: state.isLoading
                 ? const Center(
@@ -356,92 +427,97 @@ class _CreateParcelSheet extends StatelessWidget {
           topRight: Radius.circular(28),
         ),
       ),
-      padding: const EdgeInsets.all(24),
-      child: SingleChildScrollView(
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Center(
-              child: Container(
-                width: 36,
-                height: 4,
-                decoration: BoxDecoration(
-                  color: SmartStageColors.greyLight,
-                  borderRadius: BorderRadius.circular(2),
+      child: Padding(
+        padding: EdgeInsets.only(
+          bottom: MediaQuery.of(context).viewInsets.bottom,
+        ),
+        child: SingleChildScrollView(
+          padding: const EdgeInsets.all(24),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Center(
+                child: Container(
+                  width: 36,
+                  height: 4,
+                  decoration: BoxDecoration(
+                    color: SmartStageColors.greyLight,
+                    borderRadius: BorderRadius.circular(2),
+                  ),
                 ),
               ),
-            ),
-            const SizedBox(height: 20),
-            const Text(
-              'SEND PARCEL',
-              style: TextStyle(
-                fontSize: 18,
-                fontWeight: FontWeight.bold,
-                color: SmartStageColors.deepNavy,
+              const SizedBox(height: 20),
+              const Text(
+                'SEND PARCEL',
+                style: TextStyle(
+                  fontSize: 18,
+                  fontWeight: FontWeight.bold,
+                  color: SmartStageColors.deepNavy,
+                ),
               ),
-            ),
-            const SizedBox(height: 20),
-            TextField(
-              controller: senderNameController,
-              decoration: const InputDecoration(
-                labelText: 'Sender Name',
-                prefixIcon: Icon(Icons.person_outline),
+              const SizedBox(height: 20),
+              TextField(
+                controller: senderNameController,
+                decoration: const InputDecoration(
+                  labelText: 'Sender Name',
+                  prefixIcon: Icon(Icons.person_outline),
+                ),
               ),
-            ),
-            const SizedBox(height: 12),
-            TextField(
-              controller: receiverNameController,
-              decoration: const InputDecoration(
-                labelText: 'Receiver Name',
-                prefixIcon: Icon(Icons.person_outline),
+              const SizedBox(height: 12),
+              TextField(
+                controller: receiverNameController,
+                decoration: const InputDecoration(
+                  labelText: 'Receiver Name',
+                  prefixIcon: Icon(Icons.person_outline),
+                ),
               ),
-            ),
-            const SizedBox(height: 12),
-            TextField(
-              controller: receiverPhoneController,
-              keyboardType: TextInputType.phone,
-              decoration: const InputDecoration(
-                labelText: 'Receiver Phone',
-                prefixIcon: Icon(Icons.phone_outlined),
+              const SizedBox(height: 12),
+              TextField(
+                controller: receiverPhoneController,
+                keyboardType: TextInputType.phone,
+                decoration: const InputDecoration(
+                  labelText: 'Receiver Phone',
+                  prefixIcon: Icon(Icons.phone_outlined),
+                ),
               ),
-            ),
-            const SizedBox(height: 12),
-            TextField(
-              controller: pickupController,
-              decoration: const InputDecoration(
-                labelText: 'Pickup Stage',
-                prefixIcon: Icon(Icons.location_on_outlined),
+              const SizedBox(height: 12),
+              TextField(
+                controller: pickupController,
+                decoration: const InputDecoration(
+                  labelText: 'Pickup Stage',
+                  prefixIcon: Icon(Icons.location_on_outlined),
+                ),
               ),
-            ),
-            const SizedBox(height: 12),
-            TextField(
-              controller: destinationController,
-              decoration: const InputDecoration(
-                labelText: 'Destination Stage',
-                prefixIcon: Icon(Icons.flag_outlined),
+              const SizedBox(height: 12),
+              TextField(
+                controller: destinationController,
+                decoration: const InputDecoration(
+                  labelText: 'Destination Stage',
+                  prefixIcon: Icon(Icons.flag_outlined),
+                ),
               ),
-            ),
-            const SizedBox(height: 12),
-            TextField(
-              controller: fareController,
-              keyboardType: TextInputType.number,
-              decoration: const InputDecoration(
-                labelText: 'Fare (UGX)',
-                prefixIcon: Icon(Icons.payments_outlined),
+              const SizedBox(height: 12),
+              TextField(
+                controller: fareController,
+                keyboardType: TextInputType.number,
+                decoration: const InputDecoration(
+                  labelText: 'Fare (UGX)',
+                  prefixIcon: Icon(Icons.payments_outlined),
+                ),
               ),
-            ),
-            const SizedBox(height: 24),
-            GlowButton(
-              text: 'CREATE PARCEL',
-              color: SmartStageColors.gold,
-              glowColor: SmartStageColors.goldGlow,
-              onPressed: () {
-                Navigator.pop(context);
-                onCreate();
-              },
-            ),
-          ],
+              const SizedBox(height: 24),
+              GlowButton(
+                text: 'CREATE PARCEL',
+                color: SmartStageColors.gold,
+                glowColor: SmartStageColors.goldGlow,
+                onPressed: () {
+                  Navigator.pop(context);
+                  onCreate();
+                },
+              ),
+            ],
+          ),
         ),
       ),
     );

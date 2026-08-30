@@ -287,14 +287,26 @@ class _JourneyCard extends StatelessWidget {
                                         .withOpacity(0.4),
                                   ),
                                 ),
-                                child: Text(
-                                  leg.matatuPlate,
-                                  style: const TextStyle(
-                                    fontSize: 11,
-                                    fontWeight: FontWeight.bold,
-                                    color: SmartStageColors.white,
-                                    letterSpacing: 0.5,
-                                  ),
+                                child: Row(
+                                  mainAxisSize: MainAxisSize.min,
+                                  children: [
+                                    Text(
+                                      leg.vehicleIcon,
+                                      style: const TextStyle(
+                                        fontSize: 12,
+                                      ),
+                                    ),
+                                    const SizedBox(width: 4),
+                                    Text(
+                                      leg.matatuPlate,
+                                      style: const TextStyle(
+                                        fontSize: 11,
+                                        fontWeight: FontWeight.bold,
+                                        color: SmartStageColors.white,
+                                        letterSpacing: 0.5,
+                                      ),
+                                    ),
+                                  ],
                                 ),
                               ),
                               const SizedBox(width: 8),

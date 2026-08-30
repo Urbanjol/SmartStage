@@ -117,6 +117,8 @@ export const findJourney = functions.https.onCall(async (data, context) => {
         const travelTime = destIndex * 10;
         const waitTime = matatu.status === "LOADING" ? 5 : 2;
 
+
+        //new journey.push
         journeys.push({
           total_time_min: walkMinutes + waitTime + travelTime,
           total_fare: fare,
@@ -126,6 +128,7 @@ export const findJourney = functions.https.onCall(async (data, context) => {
             stage_id: startStage.id,
             matatu_plate: matatu.plate,
             matatu_id: matatu.id,
+            vehicle_type: matatu.vehicle_type || 'taxi',
             departure: "Now",
             arrival: `${travelTime} min`,
             destination: remainingRoute[destIndex],
@@ -134,6 +137,7 @@ export const findJourney = functions.https.onCall(async (data, context) => {
                    matatu.seat_state === "filling_up" ? "🟠 Filling Up" : "🔴 Full"
           }]
         });
+        //end of it
       }
     }
   }
