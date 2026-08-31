@@ -110,7 +110,7 @@ class _LoginScreenState extends State<LoginScreen> {
                         gradient: const LinearGradient(
                           colors: [
                             SmartStageColors.deepNavy,
-                            SmartStageColors.electricGreen,
+                            SmartStageColors.primaryBlue,
                           ],
                           begin: Alignment.topLeft,
                           end: Alignment.bottomRight,
@@ -118,7 +118,7 @@ class _LoginScreenState extends State<LoginScreen> {
                         borderRadius: BorderRadius.circular(28),
                         boxShadow: [
                           BoxShadow(
-                            color: SmartStageColors.greenGlow,
+                            color: SmartStageColors.primaryBlue.withOpacity(0.4),
                             blurRadius: 30,
                             spreadRadius: 2,
                           ),
@@ -261,11 +261,11 @@ class _LoginScreenState extends State<LoginScreen> {
                         : SmartStageColors.white,
                     borderRadius: BorderRadius.circular(16),
                     border: Border.all(
-                      color: SmartStageColors.electricGreen.withOpacity(0.5),
+                      color: SmartStageColors.primaryBlue.withOpacity(0.5),
                     ),
                     boxShadow: [
                       BoxShadow(
-                        color: SmartStageColors.greenGlow,
+                        color: SmartStageColors.primaryBlue.withOpacity(0.4),
                         blurRadius: 15,
                         spreadRadius: 1,
                       ),
@@ -334,11 +334,11 @@ class _LoginScreenState extends State<LoginScreen> {
               GlowButton(
                 text: _isCodeSent ? 'VERIFY & LOGIN' : 'SEND OTP',
                 color: _isCodeSent
-                    ? SmartStageColors.electricGreen
-                    : SmartStageColors.gold,
+                    ? SmartStageColors.primaryBlue
+                    : SmartStageColors.primaryBlue,
                 glowColor: _isCodeSent
-                    ? SmartStageColors.greenGlow
-                    : SmartStageColors.goldGlow,
+                    ? SmartStageColors.primaryBlue.withOpacity(0.4)
+                    : SmartStageColors.primaryBlue.withOpacity(0.4),
                 icon: _isCodeSent
                     ? Icons.verified_outlined
                     : Icons.send_outlined,
@@ -352,7 +352,7 @@ class _LoginScreenState extends State<LoginScreen> {
               if (_isLoading)
                 const Center(
                   child: CircularProgressIndicator(
-                    color: SmartStageColors.electricGreen,
+                    color: SmartStageColors.primaryBlue,
                   ),
                 ),
               const SizedBox(height: 16),

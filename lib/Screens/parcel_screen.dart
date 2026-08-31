@@ -229,8 +229,8 @@ class _ParcelScreenState extends ConsumerState<ParcelScreen> {
             padding: const EdgeInsets.all(16),
             child: GlowButton(
               text: 'SEND A PARCEL',
-              color: SmartStageColors.gold,
-              glowColor: SmartStageColors.goldGlow,
+              color: SmartStageColors.primaryBlue,
+              glowColor: SmartStageColors.primaryBlue.withOpacity(0.4),
               icon: Icons.add_box_outlined,
               onPressed: _showCreateParcelSheet,
             ),

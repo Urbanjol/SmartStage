@@ -35,10 +35,8 @@ class _RoleSelectionScreenState extends ConsumerState<RoleSelectionScreen> {
       }
 
       if (mounted) {
-        Navigator.pushReplacement(
-          context,
-          MaterialPageRoute(builder: (context) => const NavigationShell()),
-        );
+        Navigator.pushReplacementNamed(context, '/home');
+        //);
       }
     } catch (e) {
       setState(() {

@@ -184,23 +184,8 @@ class _PrivateHireScreenState extends ConsumerState<PrivateHireScreen> {
         ],
       ),
       body: Container(
-        decoration: BoxDecoration(
-          gradient: LinearGradient(
-            colors: isDark
-                ? const [
-              Color(0xFF0A192F),
-              Color(0xFF1E3A8A),
-            ]
-                : const [
-              Color(0xFF2563EB),
-              Color(0xFFB197FC),
-              Color(0xFFF8FAFC),
-            ],
-            begin: Alignment.topLeft,
-            end: Alignment.bottomRight,
-            stops: isDark ? null : const [0.0, 0.3, 1.0],
-          ),
-        ),
+        color: Colors.white,
+      //),
         child: Column(
           children: [
             Container(
@@ -268,8 +253,8 @@ class _PrivateHireScreenState extends ConsumerState<PrivateHireScreen> {
               padding: const EdgeInsets.symmetric(horizontal: 16),
               child: GlowButton(
                 text: 'CREATE BOOKING REQUEST',
-                color: const Color(0xFFFFB800),
-                glowColor: const Color(0xFFFFB800).withOpacity(0.4),
+                color: SmartStageColors.primaryBlue,
+                glowColor: SmartStageColors.primaryBlue.withOpacity(0.4),
                 icon: Icons.add_circle_outline,
                 onPressed: _showCreateBookingSheet,
               ),

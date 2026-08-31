@@ -6,6 +6,7 @@ import 'package:firebase_auth/firebase_auth.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import '../Config/firebase_options.dart';
 import '../Config/theme.dart';
+import '../Screens/splash_screen.dart';
 import '../Screens/navigation_shell.dart';
 import '../Screens/login_screen.dart';
 import '../Screens/role_selection_screen.dart';
@@ -44,7 +45,13 @@ class SmartStageApp extends ConsumerWidget {
       themeMode: themeMode,
       theme: SmartStageTheme.lightTheme,
       darkTheme: SmartStageTheme.darkTheme,
-      home: const AuthGate(),
+      home: const SplashScreen(),
+      routes: {
+        '/auth': (context) => const AuthGate(),
+        '/login': (context) => const LoginScreen(),
+        '/role': (context) => const RoleSelectionScreen(),
+        '/home': (context) => const NavigationShell(),
+      },
     );
   }
 }
@@ -61,7 +68,7 @@ class AuthGate extends StatelessWidget {
           return const Scaffold(
             body: Center(
               child: CircularProgressIndicator(
-                color: SmartStageColors.electricGreen,
+                color: SmartStageColors.primaryBlue,
               ),
             ),
           );
@@ -83,7 +90,7 @@ class AuthGate extends StatelessWidget {
               return const Scaffold(
                 body: Center(
                   child: CircularProgressIndicator(
-                    color: SmartStageColors.electricGreen,
+                    color: SmartStageColors.primaryBlue,
                   ),
                 ),
               );

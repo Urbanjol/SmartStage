@@ -25,18 +25,7 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
         elevation: 0,
       ),
       body: Container(
-        decoration: const BoxDecoration(
-          gradient: LinearGradient(
-            colors: [
-              Color(0xFF2563EB),
-              Color(0xFFB197FC),
-              Color(0xFFF8FAFC),
-            ],
-            begin: Alignment.topLeft,
-            end: Alignment.bottomRight,
-            stops: [0.0, 0.3, 1.0],
-          ),
-        ),
+        color: Colors.white,
         child: ListView(
           padding: const EdgeInsets.all(16),
           children: [
