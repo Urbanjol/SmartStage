@@ -70,8 +70,12 @@ export const findJourney = functions.https.onCall(async (data, context) => {
   stagesSnapshot.forEach(doc => stages.push({ id: doc.id, ...doc.data() }));
 
   const nearbyStages = stages.filter(s => {
-    const stageLat = s.location?._lat ?? s.location?.lat;
-    const stageLng = s.location?._lng ?? s.location?.lng;
+    const stageLoc = s.location || s.Location;
+    if (!stageLoc) return false;
+    const stageLat = stageLoc._lat ?? stageLoc.lat ?? stageLoc._latitude;
+    const stageLng = stageLoc._lng ?? stageLoc.lng ?? stageLoc._longitude;
+    //const stageLat = stageLoc._lat ?? stageLoc.lat;
+    //const stageLng = stageLoc._lng ?? stageLoc.lng;
     if (stageLat == null || stageLng == null) return false;
 
     const dist = haversineDistance(origin.lat, origin.lng, stageLat, stageLng);
@@ -91,8 +95,11 @@ export const findJourney = functions.https.onCall(async (data, context) => {
   const journeys: any[] = [];
 
   for (const startStage of nearbyStages) {
-    const stageLat = startStage.location._lat ?? startStage.location.lat;
-    const stageLng = startStage.location._lng ?? startStage.location.lng;
+    const stageLoc = startStage.location || startStage.Location;
+    const stageLat = stageLoc._lat ?? stageLoc.lat ?? stageLoc._latitude;
+    const stageLng = stageLoc._lng ?? stageLoc.lng ?? stageLoc._longitude;
+    //const stageLat = stageLoc?._lat ?? stageLoc?.lat;
+    //const stageLng = stageLoc?._lng ?? stageLoc?.lng;
     const walkToStart = haversineDistance(origin.lat, origin.lng, stageLat, stageLng) / 5.0;
     const walkMinutes = Math.ceil(walkToStart * 60);
 
@@ -105,10 +112,19 @@ export const findJourney = functions.https.onCall(async (data, context) => {
       const route = matatu.route || [];
       const stageIndex = route.indexOf(startStage.id);
       const remainingRoute = route.slice(stageIndex);
+      //new
+      //this solves the problem of case-sensitivity
 
-      const destIndex = remainingRoute.findIndex((s: string) =>
-        s === destination || stages.find((st: any) => st.id === s)?.name === destination
-      );
+      const destinationLower = destination.toLowerCase();
+      const destIndex = remainingRoute.findIndex((s: string) => {
+        const stageName = stages.find((st: any) => st.id === s)?.name;
+        return s.toLowerCase() === destinationLower ||
+               (stageName && stageName.toLowerCase() === destinationLower);
+      });
+      //end
+      //const destIndex = remainingRoute.findIndex((s: string) =>
+        //s === destination || stages.find((st: any) => st.id === s)?.name === destination
+      //);
 
       if (destIndex !== -1) {
         const fareBoard = matatu.fare_board || {};

@@ -70,7 +70,7 @@ class Journey {
       totalTimeMin: json['total_time_min'] ?? 0,
       totalFare: json['total_fare'] ?? 0,
       legs: (json['legs'] as List<dynamic>? ?? [])
-          .map((leg) => JourneyLeg.fromJson(leg as Map<String, dynamic>))
+          .map((leg) => JourneyLeg.fromJson(Map<String,dynamic>.from(leg as Map)))
           .toList(),
     );
   }

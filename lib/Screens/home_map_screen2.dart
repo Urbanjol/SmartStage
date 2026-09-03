@@ -67,12 +67,21 @@ class _HomeMapScreenState extends ConsumerState<HomeMapScreen> {
       });
 
       final data = result.data as Map<String, dynamic>;
+      //new
       final journeysList = data['journeys'] as List<dynamic>? ?? [];
 
       setState(() {
         _journeys = journeysList
-            .map((j) => Journey.fromJson(j as Map<String, dynamic>))
+            .map((j) => Journey.fromJson(Map<String, dynamic>.from(j as Map)))
             .toList();
+      //ended
+      //final journeysList = data['journeys'] as List<dynamic>? ?? [];
+
+      //setState(() {
+       // _journeys = journeysList
+         //   .map((j) => Journey.fromJson(j as Map<String, dynamic>))
+           // .toList();
+        //ends
         _isSearching = false;
 
         if (_journeys.isEmpty) {
@@ -108,6 +117,7 @@ class _HomeMapScreenState extends ConsumerState<HomeMapScreen> {
     );
   }
 
+  //new updated _search function
   Future<void> _searchNearbyTaxis() async {
     setState(() {
       _isLoadingDrivers = true;
@@ -134,6 +144,79 @@ class _HomeMapScreenState extends ConsumerState<HomeMapScreen> {
         'preference': 'fastest'
       });
       final data = result.data as Map<String, dynamic>;
+
+      final journeysRaw = data['journeys'] as List<dynamic>? ?? [];
+
+      if (journeysRaw.isEmpty) {
+        setState(() {
+          _errorMessage = "No taxi found for this route";
+          _isLoadingDrivers = false;
+        });
+        return;
+      }
+
+      final List<LatLng> driverPositions = [];
+      for (final journeyRaw in journeysRaw) {
+        final journey = Map<String, dynamic>.from(journeyRaw as Map);
+        final legs = journey['legs'] as List<dynamic>? ?? [];
+
+        for (final legRaw in legs) {
+          final leg = Map<String, dynamic>.from(legRaw as Map);
+          final stageName = leg['stage'] as String? ?? 'Unknown';
+          final offset = stageName.hashCode % 10;
+          driverPositions.add(LatLng(
+            _kampalaCenter.latitude + (offset - 5) * 0.005,
+            _kampalaCenter.longitude + (offset - 5) * 0.005,
+          ));
+        }
+      }
+
+      setState(() {
+        _nearbyDriverPositions = driverPositions;
+        _markers = driverPositions.map((pos) {
+          return Marker(
+            markerId: MarkerId(pos.toString()),
+            position: pos,
+            infoWindow: const InfoWindow(title: "Taxi"),
+          );
+        }).toSet();
+        _isLoadingDrivers = false;
+      });
+    } catch (e) {
+      setState(() {
+        _isLoadingDrivers = false;
+        _errorMessage = "Could not find journeys: $e";
+      });
+    }
+  }
+
+  Future<void> _searchNearbyTaxis2() async {
+    setState(() {
+      _isLoadingDrivers = true;
+      _errorMessage = null;
+    });
+    try {
+      final destination = _destinationController.text.trim();
+      if (destination.isEmpty) {
+        setState(() {
+          _errorMessage = "Please enter a destination";
+          _isLoadingDrivers = false;
+        });
+        return;
+      }
+
+      final HttpsCallable callable =
+      FirebaseFunctions.instance.httpsCallable('findJourney');
+      final result = await callable.call({
+        'origin': {
+          'lat': _kampalaCenter.latitude,
+          'lng': _kampalaCenter.longitude,
+        },
+        'destination': destination,
+        'preference': 'fastest'
+      });
+      final data = result.data as Map<String, dynamic>;
+
       final journeys = data['journeys'] as List<dynamic>;
 
       if (journeys.isEmpty) {
