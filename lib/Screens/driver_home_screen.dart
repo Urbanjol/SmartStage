@@ -8,6 +8,8 @@ import 'driver_parcel_request.dart';
 import 'driver_request_screen.dart';
 //import 'driver_parcel_requests_screen.dart';
 import 'notification_screen.dart';
+import '../Providers/Driver_stats_provider.dart';
+//import '../Providers/driver_stats_provider.dart';
 
 class DriverHomeScreen extends ConsumerStatefulWidget {
   final String userId;
@@ -43,6 +45,10 @@ class _DriverHomeScreenState extends ConsumerState<DriverHomeScreen> {
   void initState() {
     super.initState();
     _loadDriverData();
+    //load stats
+    Future.microtask(() {
+      ref.read(driverStatsProvider.notifier).loadStats(widget.matatuId);
+    });
     _loadParcelRequestCount();
     _loadBookingRequestCount();
   }
@@ -163,6 +169,7 @@ class _DriverHomeScreenState extends ConsumerState<DriverHomeScreen> {
   @override
   Widget build(BuildContext context) {
     final isDark = Theme.of(context).brightness == Brightness.dark;
+    final stats = ref.watch(driverStatsProvider);
 
     return Scaffold(
       backgroundColor: isDark ? const Color(0xFF0A192F) : const Color(0xFFF8FAFC),
@@ -301,25 +308,89 @@ class _DriverHomeScreenState extends ConsumerState<DriverHomeScreen> {
               const SizedBox(height: 20),
 
               // Stats Row
-              Row(
-                children: [
-                  _buildStatCard(
-                    context,
-                    label: 'EARNINGS',
-                    value: 'UGX ${_earningsToday.toString()}',
-                    icon: Icons.payments_outlined,
-                    color: const Color(0xFFFFB800),
-                  ),
-                  const SizedBox(width: 10),
-                  _buildStatCard(
-                    context,
-                    label: 'SEATS LEFT',
-                    value: _seatsAvailable.toString(),
-                    icon: Icons.event_seat,
-                    color: const Color(0xFF10B981),
-                  ),
-                ],
-              ),
+             // Row(
+               // children: [
+                 // _buildStatCard(
+                   //context,
+                    //label: 'EARNINGS',
+                    //value: 'UGX ${_earningsToday.toString()}',
+                    //icon: Icons.payments_outlined,
+                    //color: const Color(0xFFFFB800),
+                  //),
+                  //const SizedBox(width: 10),
+                  //_buildStatCard(
+                    //context,
+                    //label: 'SEATS LEFT',
+                    //value: _seatsAvailable.toString(),
+                    //icon: Icons.event_seat,
+                    //color: const Color(0xFF10B981),
+                  //),
+                //],
+              //),
+              //new update stats row
+              //
+
+
+      Row(
+      children: [
+      _buildStatCard(
+      context,
+      label: 'TODAY',
+      value: 'UGX ${stats.todayEarnings.toStringAsFixed(0)}',
+      icon: Icons.payments_outlined,
+      color: const Color(0xFFFFB800),
+    ),
+    const SizedBox(width: 10),
+    _buildStatCard(
+    context,
+    label: 'TRIPS TODAY',
+    value: '${stats.todayTrips}',
+    icon: Icons.directions_bus_outlined,
+    color: const Color(0xFF2563EB),
+    ),
+    ],
+    ),
+    const SizedBox(height: 10),
+    Row(
+    children: [
+    _buildStatCard(
+    context,
+    label: 'TOTAL TRIPS',
+    value: '${stats.totalTrips}',
+    icon: Icons.history,
+    color: const Color(0xFF7B2FF7),
+    ),
+    const SizedBox(width: 10),
+    _buildStatCard(
+    context,
+    label: 'AVG FARE',
+    value: 'UGX ${stats.averageFare.toStringAsFixed(0)}',
+    icon: Icons.star_outline,
+    color: const Color(0xFF10B981),
+    ),
+    ],
+    ),
+    const SizedBox(height: 10),
+    Row(
+    children: [
+    _buildStatCard(
+    context,
+    label: 'AVG PASSENGERS',
+    value: stats.averagePassengers.toStringAsFixed(1),
+    icon: Icons.people_outline,
+    color: const Color(0xFF48CAE4),
+    ),
+    const SizedBox(width: 10),
+    _buildStatCard(
+    context,
+    label: 'SEATS LEFT',
+    value: '$_seatsAvailable',
+    icon: Icons.event_seat,
+    color: const Color(0xFF10B981),
+    ),
+    ],
+    ),
+              //end of stats row
               const SizedBox(height: 20),
 
               // Seat State
