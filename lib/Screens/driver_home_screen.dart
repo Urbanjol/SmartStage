@@ -328,68 +328,87 @@ class _DriverHomeScreenState extends ConsumerState<DriverHomeScreen> {
                 //],
               //),
               //new update stats row
-              //
+              Row(
+                children: [
+                  _buildStatCard(
+                    context,
+                    label: 'TODAY',
+                    value: 'UGX ${stats.todayEarnings.toStringAsFixed(0)}',
+                    icon: Icons.payments_outlined,
+                    color: const Color(0xFFFFB800),
+                  ),
+                  const SizedBox(width: 10),
+                  _buildStatCard(
+                    context,
+                    label: 'TRIPS TODAY',
+                    value: '${stats.todayTrips}',
+                    icon: Icons.directions_bus_outlined,
+                    color: const Color(0xFF2563EB),
+                  ),
+                ],
+              ),
+              const SizedBox(height: 10),
+              Row(
+                children: [
+                  _buildStatCard(
+                    context,
+                    label: 'TOTAL TRIPS',
+                    value: '${stats.totalTrips}',
+                    icon: Icons.history,
+                    color: const Color(0xFF7B2FF7),
+                  ),
+                  const SizedBox(width: 10),
+                  _buildStatCard(
+                    context,
+                    label: 'AVG FARE',
+                    value: 'UGX ${stats.averageFare.toStringAsFixed(0)}',
+                    icon: Icons.star_outline,
+                    color: const Color(0xFF10B981),
+                  ),
+                ],
+              ),
+              const SizedBox(height: 10),
+              Row(
+                children: [
+                  _buildStatCard(
+                    context,
+                    label: 'TOP ROUTE',
+                    value: stats.topRoute,
+                    icon: Icons.route_outlined,
+                    color: const Color(0xFF2563EB),
+                  ),
+                  const SizedBox(width: 10),
+                  _buildStatCard(
+                    context,
+                    label: 'TOP EARNING',
+                    value: stats.topEarningRoute,
+                    icon: Icons.trending_up,
+                    color: const Color(0xFF10B981),
+                  ),
+                ],
+              ),
+              const SizedBox(height: 20),
 
+              Row(
+                children: [
+                  _buildStatCard(
+                    context,
+                    label: 'AVG PASSENGERS',
+                    value: stats.averagePassengers.toStringAsFixed(1),
+                    icon: Icons.people_outline,
+                    color: const Color(0xFF48CAE4),
+                  ),
+                  const SizedBox(width: 10),
+                  _buildStatCard(
+                    context,
+                    label: 'SEATS LEFT',
+                    value: '$_seatsAvailable',
+                    icon: Icons.event_seat,
+                    color: const Color(0xFF10B981),
+                  ),
+                ],
+              ),
 
-      Row(
-      children: [
-      _buildStatCard(
-      context,
-      label: 'TODAY',
-      value: 'UGX ${stats.todayEarnings.toStringAsFixed(0)}',
-      icon: Icons.payments_outlined,
-      color: const Color(0xFFFFB800),
-    ),
-    const SizedBox(width: 10),
-    _buildStatCard(
-    context,
-    label: 'TRIPS TODAY',
-    value: '${stats.todayTrips}',
-    icon: Icons.directions_bus_outlined,
-    color: const Color(0xFF2563EB),
-    ),
-    ],
-    ),
-    const SizedBox(height: 10),
-    Row(
-    children: [
-    _buildStatCard(
-    context,
-    label: 'TOTAL TRIPS',
-    value: '${stats.totalTrips}',
-    icon: Icons.history,
-    color: const Color(0xFF7B2FF7),
-    ),
-    const SizedBox(width: 10),
-    _buildStatCard(
-    context,
-    label: 'AVG FARE',
-    value: 'UGX ${stats.averageFare.toStringAsFixed(0)}',
-    icon: Icons.star_outline,
-    color: const Color(0xFF10B981),
-    ),
-    ],
-    ),
-    const SizedBox(height: 10),
-    Row(
-    children: [
-    _buildStatCard(
-    context,
-    label: 'AVG PASSENGERS',
-    value: stats.averagePassengers.toStringAsFixed(1),
-    icon: Icons.people_outline,
-    color: const Color(0xFF48CAE4),
-    ),
-    const SizedBox(width: 10),
-    _buildStatCard(
-    context,
-    label: 'SEATS LEFT',
-    value: '$_seatsAvailable',
-    icon: Icons.event_seat,
-    color: const Color(0xFF10B981),
-    ),
-    ],
-    ),
               //end of stats row
               const SizedBox(height: 20),
 

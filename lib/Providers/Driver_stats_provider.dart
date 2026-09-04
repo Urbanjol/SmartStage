@@ -1,6 +1,5 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
-import 'package:firebase_auth/firebase_auth.dart';
 
 class DriverStatsState {
   final bool isLoading;
@@ -9,6 +8,8 @@ class DriverStatsState {
   final int totalTrips;
   final double averageFare;
   final double averagePassengers;
+  final String topRoute;
+  final String topEarningRoute;
   final String? errorMessage;
 
   const DriverStatsState({
@@ -18,6 +19,8 @@ class DriverStatsState {
     this.totalTrips = 0,
     this.averageFare = 0,
     this.averagePassengers = 0.0,
+    this.topRoute = 'N/A',
+    this.topEarningRoute = 'N/A',
     this.errorMessage,
   });
 
@@ -28,6 +31,8 @@ class DriverStatsState {
     int? totalTrips,
     double? averageFare,
     double? averagePassengers,
+    String? topRoute,
+    String? topEarningRoute,
     String? errorMessage,
   }) {
     return DriverStatsState(
@@ -37,6 +42,8 @@ class DriverStatsState {
       totalTrips: totalTrips ?? this.totalTrips,
       averageFare: averageFare ?? this.averageFare,
       averagePassengers: averagePassengers ?? this.averagePassengers,
+      topRoute: topRoute ?? this.topRoute,
+      topEarningRoute: topEarningRoute ?? this.topEarningRoute,
       errorMessage: errorMessage ?? this.errorMessage,
     );
   }
@@ -72,13 +79,20 @@ class DriverStatsNotifier extends Notifier<DriverStatsState> {
       double totalFare = 0;
       int totalPassengers = 0;
 
+      final routeCount = <String, int>{};
+      final routeEarnings = <String, double>{};
+
       for (final booking in bookings) {
         final fare = (booking['fareAmount'] as num?)?.toDouble() ?? 0;
         final passengers = (booking['passengerCount'] as num?)?.toInt() ?? 1;
         final bookingTimeStr = booking['bookingTime'] as String?;
+        final route = booking['destinationAddress'] as String? ?? 'Unknown';
 
         totalFare += fare;
         totalPassengers += passengers;
+
+        routeCount[route] = (routeCount[route] ?? 0) + 1;
+        routeEarnings[route] = (routeEarnings[route] ?? 0) + fare;
 
         if (bookingTimeStr != null) {
           final bookingTime = DateTime.tryParse(bookingTimeStr);
@@ -97,6 +111,26 @@ class DriverStatsNotifier extends Notifier<DriverStatsState> {
       final averagePassengers =
       totalTrips > 0 ? totalPassengers / totalTrips : 0.0;
 
+      String topRoute = 'N/A';
+      int topRouteCount = 0;
+
+      routeCount.forEach((route, count) {
+        if (count > topRouteCount) {
+          topRoute = route;
+          topRouteCount = count;
+        }
+      });
+
+      String topEarningRoute = 'N/A';
+      double topEarning = 0;
+
+      routeEarnings.forEach((route, earnings) {
+        if (earnings > topEarning) {
+          topEarningRoute = route;
+          topEarning = earnings;
+        }
+      });
+
       state = state.copyWith(
         isLoading: false,
         todayEarnings: todayEarnings,
@@ -104,6 +138,8 @@ class DriverStatsNotifier extends Notifier<DriverStatsState> {
         totalTrips: totalTrips,
         averageFare: averageFare,
         averagePassengers: averagePassengers,
+        topRoute: topRoute,
+        topEarningRoute: topEarningRoute,
       );
     } catch (e) {
       state = state.copyWith(
