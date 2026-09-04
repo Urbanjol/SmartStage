@@ -64,6 +64,19 @@ export const findJourney = functions.https.onCall(async (data, context) => {
   if (!origin || typeof origin.lat !== "number" || typeof origin.lng !== "number" || !destination) {
     throw new functions.https.HttpsError("invalid-argument", "Valid origin (lat, lng) and destination required");
   }
+  //logging block
+  try {
+    await db.collection("search_history").add({
+      passenger_id: context.auth?.uid || "anonymous",
+      origin_lat: origin.lat,
+      origin_lng: origin.lng,
+      destination: destination,
+      search_time: admin.firestore.FieldValue.serverTimestamp()
+    });
+  } catch (e) {
+    // Silently fail
+  }
+  //end of logging block
 
   const stagesSnapshot = await db.collection("stages").get();
   const stages: any[] = [];

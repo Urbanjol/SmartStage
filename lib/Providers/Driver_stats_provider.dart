@@ -3,47 +3,27 @@ import 'package:cloud_firestore/cloud_firestore.dart';
 
 class DriverStatsState {
   final bool isLoading;
-  final double todayEarnings;
-  final int todayTrips;
-  final int totalTrips;
-  final double averageFare;
-  final double averagePassengers;
-  final String topRoute;
-  final String topEarningRoute;
+  final String busyHours;
+  final String hotStages;
   final String? errorMessage;
 
   const DriverStatsState({
     this.isLoading = false,
-    this.todayEarnings = 0,
-    this.todayTrips = 0,
-    this.totalTrips = 0,
-    this.averageFare = 0,
-    this.averagePassengers = 0.0,
-    this.topRoute = 'N/A',
-    this.topEarningRoute = 'N/A',
+    this.busyHours = 'N/A',
+    this.hotStages = 'N/A',
     this.errorMessage,
   });
 
   DriverStatsState copyWith({
     bool? isLoading,
-    double? todayEarnings,
-    int? todayTrips,
-    int? totalTrips,
-    double? averageFare,
-    double? averagePassengers,
-    String? topRoute,
-    String? topEarningRoute,
+    String? busyHours,
+    String? hotStages,
     String? errorMessage,
   }) {
     return DriverStatsState(
       isLoading: isLoading ?? this.isLoading,
-      todayEarnings: todayEarnings ?? this.todayEarnings,
-      todayTrips: todayTrips ?? this.todayTrips,
-      totalTrips: totalTrips ?? this.totalTrips,
-      averageFare: averageFare ?? this.averageFare,
-      averagePassengers: averagePassengers ?? this.averagePassengers,
-      topRoute: topRoute ?? this.topRoute,
-      topEarningRoute: topEarningRoute ?? this.topEarningRoute,
+      busyHours: busyHours ?? this.busyHours,
+      hotStages: hotStages ?? this.hotStages,
       errorMessage: errorMessage ?? this.errorMessage,
     );
   }
@@ -62,89 +42,59 @@ class DriverStatsNotifier extends Notifier<DriverStatsState> {
     return const DriverStatsState();
   }
 
-  Future<void> loadStats(String taxiId) async {
+  Future<void> loadDemandData() async {
     state = state.copyWith(isLoading: true, errorMessage: null);
 
     try {
       final snapshot = await _firestore
-          .collection('bookings')
-          .where('taxiId', isEqualTo: taxiId)
+          .collection('search_history')
+          .orderBy('search_time', descending: true)
+          .limit(100)
           .get();
 
-      final bookings = snapshot.docs.map((doc) => doc.data()).toList();
+      final searches = snapshot.docs.map((doc) => doc.data()).toList();
 
       final now = DateTime.now();
-      double todayEarnings = 0;
-      int todayTrips = 0;
-      double totalFare = 0;
-      int totalPassengers = 0;
+      final hourCount = <int, int>{};
+      final destinationCount = <String, int>{};
 
-      final routeCount = <String, int>{};
-      final routeEarnings = <String, double>{};
+      for (final search in searches) {
+        final searchTime = search['search_time'];
+        final destination = search['destination'] as String? ?? 'Unknown';
 
-      for (final booking in bookings) {
-        final fare = (booking['fareAmount'] as num?)?.toDouble() ?? 0;
-        final passengers = (booking['passengerCount'] as num?)?.toInt() ?? 1;
-        final bookingTimeStr = booking['bookingTime'] as String?;
-        final route = booking['destinationAddress'] as String? ?? 'Unknown';
+        destinationCount[destination] =
+            (destinationCount[destination] ?? 0) + 1;
 
-        totalFare += fare;
-        totalPassengers += passengers;
-
-        routeCount[route] = (routeCount[route] ?? 0) + 1;
-        routeEarnings[route] = (routeEarnings[route] ?? 0) + fare;
-
-        if (bookingTimeStr != null) {
-          final bookingTime = DateTime.tryParse(bookingTimeStr);
-          if (bookingTime != null &&
-              bookingTime.year == now.year &&
-              bookingTime.month == now.month &&
-              bookingTime.day == now.day) {
-            todayEarnings += fare;
-            todayTrips += 1;
+        if (searchTime != null) {
+          final time = (searchTime as dynamic).toDate() as DateTime;
+          if (time.year == now.year &&
+              time.month == now.month &&
+              time.day == now.day) {
+            hourCount[time.hour] = (hourCount[time.hour] ?? 0) + 1;
           }
         }
       }
 
-      final totalTrips = bookings.length;
-      final averageFare = totalTrips > 0 ? totalFare / totalTrips : 0.0;
-      final averagePassengers =
-      totalTrips > 0 ? totalPassengers / totalTrips : 0.0;
+      final sortedHours = hourCount.entries.toList()
+        ..sort((a, b) => b.value.compareTo(a.value));
 
-      String topRoute = 'N/A';
-      int topRouteCount = 0;
+      final topHours = sortedHours.take(3).map((e) => '${e.key}:00').join(', ');
 
-      routeCount.forEach((route, count) {
-        if (count > topRouteCount) {
-          topRoute = route;
-          topRouteCount = count;
-        }
-      });
+      final sortedDest = destinationCount.entries.toList()
+        ..sort((a, b) => b.value.compareTo(a.value));
 
-      String topEarningRoute = 'N/A';
-      double topEarning = 0;
-
-      routeEarnings.forEach((route, earnings) {
-        if (earnings > topEarning) {
-          topEarningRoute = route;
-          topEarning = earnings;
-        }
-      });
+      final topDestinations =
+      sortedDest.take(3).map((e) => e.key).join(', ');
 
       state = state.copyWith(
         isLoading: false,
-        todayEarnings: todayEarnings,
-        todayTrips: todayTrips,
-        totalTrips: totalTrips,
-        averageFare: averageFare,
-        averagePassengers: averagePassengers,
-        topRoute: topRoute,
-        topEarningRoute: topEarningRoute,
+        busyHours: topHours.isEmpty ? 'N/A' : topHours,
+        hotStages: topDestinations.isEmpty ? 'N/A' : topDestinations,
       );
     } catch (e) {
       state = state.copyWith(
         isLoading: false,
-        errorMessage: 'Failed to load stats: $e',
+        errorMessage: 'Failed to load demand data: $e',
       );
     }
   }
