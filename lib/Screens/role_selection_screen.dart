@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
+import '../Screens/driver_setup_screen.dart';
 import '../Config/theme.dart';
 import 'navigation_shell.dart';
 
@@ -16,7 +17,50 @@ class RoleSelectionScreen extends ConsumerStatefulWidget {
 class _RoleSelectionScreenState extends ConsumerState<RoleSelectionScreen> {
   bool _isSaving = false;
 
+  //updated selectRole function
   Future<void> _selectRole(String role) async {
+    setState(() {
+      _isSaving = true;
+    });
+
+    try {
+      final user = FirebaseAuth.instance.currentUser;
+      if (user != null) {
+        await FirebaseFirestore.instance
+            .collection('users')
+            .doc(user.uid)
+            .set({
+          'roles': [role],
+          'role': role,
+          'created_at': FieldValue.serverTimestamp(),
+        }, SetOptions(merge: true));
+      }
+
+      if (mounted) {
+        if (role == 'driver' || role == 'conductor') {
+          Navigator.pushReplacement(
+            context,
+            MaterialPageRoute(builder: (context) => const DriverSetupScreen()),
+          );
+        } else {
+          Navigator.pushReplacementNamed(context, '/home');
+        }
+      }
+    } catch (e) {
+      setState(() {
+        _isSaving = false;
+      });
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text('Failed to save role: $e'),
+          backgroundColor: SmartStageColors.red,
+        ),
+      );
+    }
+  }
+  //end of it
+
+  Future<void> _selectRole2(String role) async {
     setState(() {
       _isSaving = true;
     });
@@ -72,19 +116,39 @@ class _RoleSelectionScreenState extends ConsumerState<RoleSelectionScreen> {
           child: Column(
             children: [
               const Spacer(),
-              const Icon(
-                Icons.directions_bus,
-                size: 80,
-                color: Color(0xFF2563EB),
-              ),
-              const SizedBox(height: 20),
-              const Text(
-                'SMARTSTAGE',
-                style: TextStyle(
-                  fontSize: 28,
-                  fontWeight: FontWeight.bold,
-                  color: Color(0xFF1E293B),
-                  letterSpacing: 2,
+              Padding(
+                padding: const EdgeInsets.symmetric(horizontal: 24),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      'YOUR JOURNEY STARTS HERE',
+                      style: TextStyle(
+                        fontSize: 12,
+                        fontWeight: FontWeight.w600,
+                        letterSpacing: 2,
+                        color: SmartStageColors.primaryBlue.withOpacity(0.5),
+                      ),
+                    ),
+                    const SizedBox(height: 8),
+                    const Text(
+                      'Move smarter with SmartStage',
+                      style: TextStyle(
+                        fontSize: 26,
+                        fontWeight: FontWeight.w800,
+                        color: Color(0xFF1E293B),
+                      ),
+                    ),
+                    const SizedBox(height: 12),
+                    Text(
+                      'One connected space for passengers, drivers, and conductors to keep every trip running smoothly.',
+                      style: TextStyle(
+                        fontSize: 14,
+                        height: 1.5,
+                        color: Color(0xFF64748B),
+                      ),
+                    ),
+                  ],
                 ),
               ),
               const SizedBox(height: 8),

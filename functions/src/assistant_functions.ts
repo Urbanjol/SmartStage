@@ -15,6 +15,98 @@ interface AssistantInput {
   question: string;
 }
 
+//auto-fill assistant
+export const autoFillRoute = functions.https.onCall(async (data, context) => {
+  const { origin, destination } = data as { origin: string; destination: string };
+
+  if (!origin || !destination) {
+    throw new functions.https.HttpsError("invalid-argument", "Origin and destination required");
+  }
+
+  // Check if route already exists
+  try {
+    const existingSnapshot = await db.collection("ai_routes")
+      .where("origin", "==", origin)
+      .where("destination", "==", destination)
+      .limit(1)
+      .get();
+
+    if (!existingSnapshot.empty) {
+      const existingDoc = existingSnapshot.docs[0];
+      const existingRoute = existingDoc.data().stages;
+
+      await existingDoc.ref.update({
+        used_count: admin.firestore.FieldValue.increment(1)
+      });
+
+      return { route: existingRoute, source: "stored" };
+    }
+  } catch (e) {
+    // Continue to Groq
+  }
+
+  const prompt = `
+    You know Ugandan taxi routes.
+    A taxi is going from ${origin} to ${destination}.
+    List the major taxi stages along the way in order.
+    Include the origin first and destination last.
+    Return ONLY a JSON array of stage names.
+    Example: ["Mukono", "Bweyogere", "Kireka", "Old Taxi Park"]
+  `;
+
+  try {
+    const response = await fetch("https://api.groq.com/openai/v1/chat/completions", {
+      method: "POST",
+      headers: {
+        "Authorization": `Bearer ${GROQ_API_KEY}`,
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify({
+        model: "qwen/qwen3.6-27b",
+        messages: [
+          {
+            role: "system",
+            content: "You are SmartStage route assistant. You know Ugandan roads and taxi stages."
+          },
+          {
+            role: "user",
+            content: prompt
+          }
+        ],
+        temperature: 0.3,
+        max_tokens: 500,
+      }),
+    });
+
+    const result = await response.json() as any;
+    const content = result.choices?.[0]?.message?.content || "[]";
+
+    //const match = content.match(/\[.*\]/s);
+    const match = content.match(/\[[\s\S]*\]/);
+    const route = match ? JSON.parse(match[0]) : [origin, destination];
+
+    // Store the route
+    try {
+      await db.collection("ai_routes").add({
+        origin: origin,
+        destination: destination,
+        stages: route,
+        generated_by: "groq",
+        used_count: 1,
+        verified_count: 0,
+        created_at: admin.firestore.FieldValue.serverTimestamp()
+      });
+    } catch (e) {
+      // Silently fail
+    }
+
+    return { route, source: "groq" };
+  } catch (e) {
+    return { route: [origin, destination], source: "fallback" };
+  }
+});
+//end of it
+
 export const smartAssistant = functions.https.onCall(async (data, ctx) => {
   // Safe extraction with fallback empty object
   const { question } = (data || {}) as Partial<AssistantInput>;

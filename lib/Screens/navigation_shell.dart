@@ -9,6 +9,8 @@ import '../Screens/privateHireScreen.dart';
 import '../Screens/profile_screen.dart';
 import '../Screens/driver_home_screen.dart';
 import '../Screens/parcel_screen.dart';
+import '../Screens/driver_parcel_request.dart';
+import '../Screens/driver_request_screen.dart';
 
 class NavigationShell extends ConsumerStatefulWidget {
   const NavigationShell({Key? key}) : super(key: key);
@@ -51,7 +53,7 @@ class _NavigationShellState extends ConsumerState<NavigationShell> {
 
       if (_matatuId != null) {
         final matatuDoc = await FirebaseFirestore.instance
-            .collection('matatus')
+            .collection('taxis')
             .doc(_matatuId)
             .get();
 
@@ -70,7 +72,7 @@ class _NavigationShellState extends ConsumerState<NavigationShell> {
         }
       }
     } catch (e) {
-      // Silently fail, user stays as passenger
+      // Silently fail
     }
 
     setState(() => _isLoading = false);
@@ -84,7 +86,7 @@ class _NavigationShellState extends ConsumerState<NavigationShell> {
       return const Scaffold(
         body: Center(
           child: CircularProgressIndicator(
-            color: SmartStageColors.electricGreen,
+            color: SmartStageColors.primaryBlue,
           ),
         ),
       );
@@ -93,12 +95,79 @@ class _NavigationShellState extends ConsumerState<NavigationShell> {
     final bool isDriver =
         _userRoles.contains('driver') || _userRoles.contains('conductor');
 
-    final List<Widget> screens = [
-      const HomeMapScreen(),
-      const ParcelScreen(),
-      const PrivateHireScreen(),
-      const ProfileScreen(),
-    ];
+    final List<Widget> screens;
+
+    if (isDriver) {
+      screens = [
+        DriverHomeScreen(
+          userId: FirebaseAuth.instance.currentUser!.uid,
+          matatuId: _matatuId ?? '',
+          matatuPlate: _matatuPlate ?? 'Unknown',
+          route: _route ?? [],
+          routeNames: _routeNames ?? [],
+        ),
+        const DriverParcelRequestsScreen(),
+        const DriverRequestsScreen(),
+        const ProfileScreen(),
+      ];
+    } else {
+      screens = [
+        const HomeMapScreen(),
+        const ParcelScreen(),
+        const PrivateHireScreen(),
+        const ProfileScreen(),
+      ];
+    }
+
+    final List<BottomNavigationBarItem> navItems;
+
+    if (isDriver) {
+      navItems = [
+        const BottomNavigationBarItem(
+          icon: Icon(Icons.dashboard_outlined),
+          activeIcon: Icon(Icons.dashboard),
+          label: 'Dashboard',
+        ),
+        const BottomNavigationBarItem(
+          icon: Icon(Icons.inventory_2_outlined),
+          activeIcon: Icon(Icons.inventory_2),
+          label: 'Parcels',
+        ),
+        const BottomNavigationBarItem(
+          icon: Icon(Icons.inbox_outlined),
+          activeIcon: Icon(Icons.inbox),
+          label: 'Requests',
+        ),
+        const BottomNavigationBarItem(
+          icon: Icon(Icons.person_outline),
+          activeIcon: Icon(Icons.person),
+          label: 'Profile',
+        ),
+      ];
+    } else {
+      navItems = [
+        const BottomNavigationBarItem(
+          icon: Icon(Icons.map_outlined),
+          activeIcon: Icon(Icons.map),
+          label: 'Home',
+        ),
+        const BottomNavigationBarItem(
+          icon: Icon(Icons.inventory_2_outlined),
+          activeIcon: Icon(Icons.inventory_2),
+          label: 'Parcels',
+        ),
+        const BottomNavigationBarItem(
+          icon: Icon(Icons.directions_bus_outlined),
+          activeIcon: Icon(Icons.directions_bus),
+          label: 'Private Hire',
+        ),
+        const BottomNavigationBarItem(
+          icon: Icon(Icons.person_outline),
+          activeIcon: Icon(Icons.person),
+          label: 'Profile',
+        ),
+      ];
+    }
 
     return Scaffold(
       body: IndexedStack(
@@ -107,10 +176,10 @@ class _NavigationShellState extends ConsumerState<NavigationShell> {
       ),
       bottomNavigationBar: Container(
         decoration: BoxDecoration(
-          color: Theme.of(context).bottomNavigationBarTheme.backgroundColor,
+          color: Colors.white,
           boxShadow: [
             BoxShadow(
-              color: Colors.black.withOpacity(0.1),
+              color: Colors.black.withOpacity(0.08),
               blurRadius: 20,
               offset: const Offset(0, -4),
             ),
@@ -123,9 +192,7 @@ class _NavigationShellState extends ConsumerState<NavigationShell> {
           },
           type: BottomNavigationBarType.fixed,
           selectedItemColor: SmartStageColors.primaryBlue,
-          unselectedItemColor: Theme.of(context).brightness == Brightness.dark
-              ? SmartStageColors.greyDark
-              : SmartStageColors.greyMid,
+          unselectedItemColor: SmartStageColors.greyMid,
           showUnselectedLabels: true,
           backgroundColor: Colors.transparent,
           elevation: 0,
@@ -137,73 +204,9 @@ class _NavigationShellState extends ConsumerState<NavigationShell> {
             fontWeight: FontWeight.normal,
             fontSize: 12,
           ),
-          items: [
-            const BottomNavigationBarItem(
-              icon: Icon(Icons.map_outlined),
-              activeIcon: Icon(Icons.map),
-              label: 'Home',
-            ),
-            const BottomNavigationBarItem(
-              icon: Icon(Icons.inventory_2_outlined),
-              activeIcon: Icon(Icons.inventory_2),
-              label: 'Parcels',
-            ),
-            const BottomNavigationBarItem(
-              icon: Icon(Icons.directions_bus_outlined),
-              activeIcon: Icon(Icons.directions_bus),
-              label: 'Private Hire',
-            ),
-            if (isDriver)
-              const BottomNavigationBarItem(
-                icon: Icon(Icons.airport_shuttle_outlined),
-                activeIcon: Icon(Icons.airport_shuttle),
-                label: 'Drive',
-              ),
-            const BottomNavigationBarItem(
-              icon: Icon(Icons.person_outline),
-              activeIcon: Icon(Icons.person),
-              label: 'Profile',
-            ),
-          ],
+          items: navItems,
         ),
       ),
-      floatingActionButton: isDriver
-          ? Container(
-        decoration: BoxDecoration(
-          borderRadius: BorderRadius.circular(30),
-          boxShadow: [
-            BoxShadow(
-              color: SmartStageColors.greenGlow,
-              blurRadius: 20,
-              spreadRadius: 2,
-            ),
-          ],
-        ),
-        child: FloatingActionButton.extended(
-          onPressed: () {
-            if (_matatuId != null && _matatuPlate != null) {
-              Navigator.push(
-                context,
-                MaterialPageRoute(
-                  builder: (context) => DriverHomeScreen(
-                    userId: FirebaseAuth.instance.currentUser!.uid,
-                    matatuId: _matatuId!,
-                    matatuPlate: _matatuPlate!,
-                    route: _route ?? [],
-                    routeNames: _routeNames ?? [],
-                  ),
-                ),
-              );
-            }
-          },
-          icon: const Icon(Icons.directions_bus),
-          label: const Text('Drive'),
-          backgroundColor: SmartStageColors.electricGreen,
-          foregroundColor: SmartStageColors.white,
-          elevation: 0,
-        ),
-      )
-          : null,
     );
   }
 }
