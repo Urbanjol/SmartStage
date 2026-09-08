@@ -8,6 +8,7 @@ import '../Config/theme.dart';
 import 'notification_screen.dart';
 import 'trip_history_screen.dart';
 import 'payment_method.dart';
+import '../Screens/verification_screen_driver.dart';
 //import 'notifications_screen.dart';
 
 class ProfileScreen extends ConsumerStatefulWidget {
@@ -355,6 +356,24 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
                       );
                     },
                   ),
+                  //check if is driver
+                  if (isDriver) ...[
+                    _buildDivider(isDark),
+                    _buildMenuItem(
+                      context,
+                      icon: Icons.verified_outlined,
+                      title: 'Get Verified',
+                      onTap: () {
+                        Navigator.push(
+                          context,
+                          MaterialPageRoute(
+                            builder: (context) => const VerificationScreen(),
+                          ),
+                        );
+                      },
+                    ),
+                  ],
+                  //close
                 ],
               ),
             ),
