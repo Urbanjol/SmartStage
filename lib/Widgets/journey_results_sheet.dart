@@ -1,8 +1,16 @@
 import 'package:flutter/material.dart';
 import '../Config/theme.dart';
 import '../models/Journey_model.dart';
+import 'package:http/http.dart' as http;
+import 'dart:convert';
 
-class JourneyResultsSheet extends StatelessWidget {
+//import 'package:flutter/material.dart';
+//import 'package:http/http.dart' as http;
+//import 'dart:convert';
+//import '../Config/theme.dart';
+//import '../models/Journey_model.dart';
+
+class JourneyResultsSheet extends StatefulWidget {
   final List<Journey> journeys;
   final String destination;
 
@@ -13,8 +21,54 @@ class JourneyResultsSheet extends StatelessWidget {
   }) : super(key: key);
 
   @override
+  State<JourneyResultsSheet> createState() => _JourneyResultsSheetState();
+}
+
+class _JourneyResultsSheetState extends State<JourneyResultsSheet> {
+  String? _photoUrl;
+
+  @override
+  void initState() {
+    super.initState();
+    _loadDestinationPhoto();
+  }
+
+  Future<void> _loadDestinationPhoto() async {
+    final apiKey = "AIzaSyAFzb2gSE1rAofZCW01N3bAm4BIA1fdgHc";
+
+    try {
+      final searchResponse = await http.get(
+        Uri.parse(
+          'https://maps.googleapis.com/maps/api/place/textsearch/json?query=${widget.destination},Uganda&key=$apiKey',
+        ),
+      );
+
+      final searchData = jsonDecode(searchResponse.body);
+
+      if (searchData['results'] != null &&
+          searchData['results'].isNotEmpty) {
+        final place = searchData['results'][0];
+
+        if (place['photos'] != null && place['photos'].isNotEmpty) {
+          final photoRef = place['photos'][0]['photo_reference'];
+          setState(() {
+            _photoUrl =
+            'https://maps.googleapis.com/maps/api/place/photo?maxwidth=600&photoreference=$photoRef&key=$apiKey';
+          });
+        }
+      }
+    } catch (e) {
+      // Silently fail
+    }
+  }
+
+  @override
   Widget build(BuildContext context) {
     final isDark = Theme.of(context).brightness == Brightness.dark;
+    final destination = widget.destination;
+    final journeys = widget.journeys;
+    final photoUrl = _photoUrl ??
+        'https://maps.googleapis.com/maps/api/place/photo?maxwidth=600&photoreference=default&key=AIzaSyAFzb2gSE1rAofZCW01N3bAm4BIA1fdgHc';
 
     return Container(
       decoration: BoxDecoration(
@@ -48,42 +102,67 @@ class JourneyResultsSheet extends StatelessWidget {
           const SizedBox(height: 16),
 
           Padding(
+            padding: const EdgeInsets.symmetric(horizontal: 16),
+            child: Container(
+              height: 160,
+              decoration: BoxDecoration(
+                borderRadius: BorderRadius.circular(16),
+                image: DecorationImage(
+                  image: NetworkImage(photoUrl),
+                  fit: BoxFit.cover,
+                ),
+              ),
+              child: Container(
+                decoration: BoxDecoration(
+                  borderRadius: BorderRadius.circular(16),
+                  gradient: LinearGradient(
+                    colors: [
+                      Colors.black.withOpacity(0.6),
+                      Colors.transparent,
+                    ],
+                    begin: Alignment.bottomCenter,
+                    end: Alignment.topCenter,
+                  ),
+                ),
+                child: Padding(
+                  padding: const EdgeInsets.all(16),
+                  child: Align(
+                    alignment: Alignment.bottomLeft,
+                    child: Text(
+                      'To: $destination',
+                      style: const TextStyle(
+                        fontSize: 18,
+                        fontWeight: FontWeight.bold,
+                        color: Colors.white,
+                      ),
+                    ),
+                  ),
+                ),
+              ),
+            ),
+          ),
+
+          const SizedBox(height: 16),
+
+          Padding(
             padding: const EdgeInsets.symmetric(horizontal: 24),
             child: Row(
               mainAxisAlignment: MainAxisAlignment.spaceBetween,
               children: [
                 Text(
-                  'To: $destination',
+                  '${journeys.length} routes',
                   style: TextStyle(
                     fontWeight: FontWeight.bold,
-                    fontSize: 18,
+                    fontSize: 16,
                     color: isDark
                         ? SmartStageColors.white
                         : SmartStageColors.deepNavy,
                   ),
                 ),
-                Container(
-                  padding: const EdgeInsets.symmetric(
-                      horizontal: 10, vertical: 5),
-                  decoration: BoxDecoration(
-                    color: SmartStageColors.electricGreen.withOpacity(0.1),
-                    borderRadius: BorderRadius.circular(20),
-                    border: Border.all(
-                      color: SmartStageColors.electricGreen.withOpacity(0.3),
-                    ),
-                  ),
-                  child: Text(
-                    '${journeys.length} route${journeys.length > 1 ? 's' : ''}',
-                    style: const TextStyle(
-                      color: SmartStageColors.electricGreen,
-                      fontSize: 12,
-                      fontWeight: FontWeight.bold,
-                    ),
-                  ),
-                ),
               ],
             ),
           ),
+
           const SizedBox(height: 12),
 
           Expanded(
@@ -102,6 +181,7 @@ class JourneyResultsSheet extends StatelessWidget {
   }
 }
 
+// Rest of journey card code remains same
 class _JourneyCard extends StatelessWidget {
   final Journey journey;
   final int index;
