@@ -2,17 +2,20 @@ import 'package:flutter/material.dart';
 
 class MorphingActionButton extends StatefulWidget {
   final VoidCallback onScanningStarted;
+  final bool isScanning;
 
   const MorphingActionButton({
     Key? key,
     required this.onScanningStarted,
+    this.isScanning = false,
   }) : super(key: key);
 
   @override
   State<MorphingActionButton> createState() => _MorphingActionButtonState();
 }
 
-class _MorphingActionButtonState extends State<MorphingActionButton> with TickerProviderStateMixin {
+class _MorphingActionButtonState extends State<MorphingActionButton>
+    with TickerProviderStateMixin {
   bool _isCollapsed = false;
   bool _isCentered = false;
   bool _showRadar = false;
@@ -22,13 +25,11 @@ class _MorphingActionButtonState extends State<MorphingActionButton> with Ticker
   @override
   void initState() {
     super.initState();
-      // Endless loop controller for the pulse ripple effect
-      _radarController = AnimationController(
-        vsync: this,
-        duration: const Duration(seconds: 2),
-      );
-    }
-  //}
+    _radarController = AnimationController(
+      vsync: this,
+      duration: const Duration(seconds: 2),
+    );
+  }
 
   @override
   void dispose() {
@@ -36,40 +37,54 @@ class _MorphingActionButtonState extends State<MorphingActionButton> with Ticker
     super.dispose();
   }
 
-  void _triggerMorphPipeline() async {
-    if (_isCollapsed) return; // Prevent double-taps
+  @override
+  void didUpdateWidget(covariant MorphingActionButton oldWidget) {
+    super.didUpdateWidget(oldWidget);
 
-    // Phase 1: Collapse the wide button into a circle
+    if (oldWidget.isScanning && !widget.isScanning) {
+      _resetButton();
+    }
+  }
+
+  void _resetButton() {
+    _radarController.stop();
+    _radarController.reset();
+
+    setState(() {
+      _showRadar = false;
+      _isCentered = false;
+      _isCollapsed = false;
+    });
+  }
+
+  void _triggerMorphPipeline() async {
+    if (_isCollapsed) return;
+
     setState(() => _isCollapsed = true);
     await Future.delayed(const Duration(milliseconds: 300));
 
-    // Phase 2: Launch the circle to the screen center
     setState(() => _isCentered = true);
     await Future.delayed(const Duration(milliseconds: 450));
 
-    // Phase 3: Deploy the radar loops
     setState(() => _showRadar = true);
     _radarController.repeat();
 
-    // Fire the callback to notify parent screens to load drivers, etc.
     widget.onScanningStarted();
   }
 
   @override
   Widget build(BuildContext context) {
     final isDarkMode = Theme.of(context).brightness == Brightness.dark;
-    final primaryColor = const Color(0xFF0056b3);
+    final primaryColor = const Color(0xFF2563EB);
 
     return Stack(
       alignment: Alignment.center,
       children: [
-        // 1. THE RADAR RIPPLES (Rendered behind the anchor)
-        if (_showRadar)
+        if (_showRadar && widget.isScanning)
           ...List.generate(3, (index) {
             return AnimatedBuilder(
               animation: _radarController,
               builder: (context, child) {
-                // Stagger each ripple wave sequentially
                 double progress = (_radarController.value + (index / 3)) % 1.0;
                 return Container(
                   width: progress * 320,
@@ -84,33 +99,33 @@ class _MorphingActionButtonState extends State<MorphingActionButton> with Ticker
             );
           }),
 
-        // 2. THE MORPHING BUTTON & LAUNCHER FLIGHT FRAME
         AnimatedAlign(
           duration: const Duration(milliseconds: 450),
-          curve: Curves.fastOutSlowIn, // Premium presentation easing path
+          curve: Curves.fastOutSlowIn,
           alignment: _isCentered ? Alignment.center : Alignment.bottomCenter,
           child: Padding(
             padding: EdgeInsets.only(bottom: _isCentered ? 0 : 24.0),
             child: GestureDetector(
               onTap: _triggerMorphPipeline,
-              /////////////////////
               child: AnimatedContainer(
                 duration: const Duration(milliseconds: 300),
                 curve: Curves.easeInOut,
-                width: _isCollapsed ? 56 : MediaQuery.of(context).size.width * 0.85,
+                width: _isCollapsed
+                    ? 56
+                    : MediaQuery.of(context).size.width * 0.85,
                 height: 56,
-                // REMOVED: elevation: _isCollapsed ? 8 : 2,
                 decoration: BoxDecoration(
-                  color: _isCollapsed && isDarkMode ? Colors.orange : primaryColor,
+                  color: _isCollapsed && isDarkMode
+                      ? Colors.orange
+                      : primaryColor,
                   borderRadius: BorderRadius.circular(_isCollapsed ? 28 : 14),
                   boxShadow: [
                     BoxShadow(
-                      // FIXED: The shadow dynamically deepens when collapsed to simulate elevation lift!
                       color: Colors.black.withOpacity(isDarkMode ? 0.4 : 0.15),
                       blurRadius: _isCollapsed ? 12 : 6,
                       spreadRadius: _isCollapsed ? 2 : 0,
                       offset: _isCollapsed ? const Offset(0, 6) : const Offset(0, 3),
-                    )
+                    ),
                   ],
                 ),
                 alignment: Alignment.center,
@@ -135,8 +150,6 @@ class _MorphingActionButtonState extends State<MorphingActionButton> with Ticker
                   ),
                 ),
               ),
-              //////////////////
-
             ),
           ),
         ),

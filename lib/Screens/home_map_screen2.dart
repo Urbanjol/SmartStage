@@ -13,6 +13,8 @@ import '../Widgets/taxi_metal_poster_card.dart';
 import '../models/Journey_model.dart';
 import '../Widgets/journey_results_sheet.dart';
 import '../Screens/add_stage_screen.dart';
+import '../Providers/taxi_stream_provider.dart';
+import '../Widgets/vehicle_info_sheet.dart';
 
 class HomeMapScreen extends ConsumerStatefulWidget {
   const HomeMapScreen({Key? key}) : super(key: key);
@@ -27,6 +29,7 @@ class _HomeMapScreenState extends ConsumerState<HomeMapScreen> {
   GoogleMapController? _mapController;
   List<Journey> _journeys = [];
   bool _isSearching = false;
+  bool _isScanning = false;
   Set<Marker> _markers = {};
 
   final LatLng _kampalaCenter = const LatLng(0.3136, 32.5811);
@@ -41,7 +44,63 @@ class _HomeMapScreenState extends ConsumerState<HomeMapScreen> {
     _pickupController.text = "Current Location (Kampala Stage)";
   }
 
+//new searchJourney function
   Future<void> _searchJourneys() async {
+    final destination = _destinationController.text.trim();
+    if (destination.isEmpty) {
+      setState(() => _errorMessage = "Please enter a destination");
+      return;
+    }
+
+    setState(() {
+      _isSearching = true;
+      _isScanning = true;
+      _errorMessage = null;
+      _journeys = [];
+    });
+
+    try {
+      final callable =
+      FirebaseFunctions.instance.httpsCallable('findJourney');
+      final result = await callable.call({
+        'origin': {
+          'lat': _kampalaCenter.latitude,
+          'lng': _kampalaCenter.longitude,
+        },
+        'destination': destination,
+        'preference': 'fastest',
+      });
+
+      final data = result.data as Map<String, dynamic>;
+      final journeysList = data['journeys'] as List<dynamic>? ?? [];
+
+      setState(() {
+        _journeys = journeysList
+            .map((j) => Journey.fromJson(Map<String, dynamic>.from(j as Map)))
+            .toList();
+
+        _isSearching = false;
+        _isScanning = false;
+
+        if (_journeys.isEmpty) {
+          _errorMessage = "No routes found to $destination";
+        }
+      });
+
+      if (_journeys.isNotEmpty) {
+        _showJourneyResults();
+      }
+    } catch (e) {
+      setState(() {
+        _isSearching = false;
+        _isScanning = false;
+        _errorMessage = "Search failed: $e";
+      });
+    }
+  }
+  //end of the function
+
+  Future<void> _searchJourneys2() async {
     final destination = _destinationController.text.trim();
     if (destination.isEmpty) {
       setState(() => _errorMessage = "Please enter a destination");
@@ -121,6 +180,7 @@ class _HomeMapScreenState extends ConsumerState<HomeMapScreen> {
   Future<void> _searchNearbyTaxis() async {
     setState(() {
       _isLoadingDrivers = true;
+      _isScanning = true;
       _errorMessage = null;
     });
     try {
@@ -129,6 +189,7 @@ class _HomeMapScreenState extends ConsumerState<HomeMapScreen> {
         setState(() {
           _errorMessage = "Please enter a destination";
           _isLoadingDrivers = false;
+          _isScanning = false;
         });
         return;
       }
@@ -151,6 +212,7 @@ class _HomeMapScreenState extends ConsumerState<HomeMapScreen> {
         setState(() {
           _errorMessage = "No taxi found for this route";
           _isLoadingDrivers = false;
+          _isScanning = false;
         });
         return;
       }
@@ -181,15 +243,48 @@ class _HomeMapScreenState extends ConsumerState<HomeMapScreen> {
           );
         }).toSet();
         _isLoadingDrivers = false;
+        _isScanning = false;
       });
     } catch (e) {
       setState(() {
         _isLoadingDrivers = false;
+        _isScanning = false;
         _errorMessage = "Could not find journeys: $e";
       });
     }
   }
+//method to build markers from taxis
+  Set<Marker> _buildTaxiMarkers(List<TaxiVehicle> taxis, bool isDark) {
+    final markers = <Marker>{};
 
+    for (final taxi in taxis) {
+      final color = taxi.vehicleType == 'e_bus'
+          ? const Color(0xFF10B981)
+          : taxi.vehicleType == 'bus'
+          ? const Color(0xFF7B2FF7)
+          : const Color(0xFF2563EB);
+
+      markers.add(
+        Marker(
+          markerId: MarkerId(taxi.id),
+          position: LatLng(taxi.lat, taxi.lng),
+          onTap: () {
+            showVehicleInfoSheet(context,taxi);
+          },
+          icon: BitmapDescriptor.defaultMarkerWithHue(
+            taxi.vehicleType == 'e_bus'
+                ? BitmapDescriptor.hueGreen
+                : taxi.vehicleType == 'bus'
+                ? BitmapDescriptor.hueViolet
+                : BitmapDescriptor.hueBlue,
+          ),
+        ),
+      );
+    }
+
+    return markers;
+  }
+  //end of method
   Future<void> _searchNearbyTaxis2() async {
     setState(() {
       _isLoadingDrivers = true;
@@ -250,10 +345,12 @@ class _HomeMapScreenState extends ConsumerState<HomeMapScreen> {
           );
         }).toSet();
         _isLoadingDrivers = false;
+        _isScanning = false;
       });
     } catch (e) {
       setState(() {
         _isLoadingDrivers = false;
+        _isScanning = false;
         _errorMessage = "Could not find journeys: $e";
       });
     }
@@ -262,6 +359,7 @@ class _HomeMapScreenState extends ConsumerState<HomeMapScreen> {
   @override
   Widget build(BuildContext context) {
     final isDark = Theme.of(context).brightness == Brightness.dark;
+    final taxiAsync = ref.watch(taxiStreamProvider);
 
     return Scaffold(
       body: Stack(
@@ -271,7 +369,14 @@ class _HomeMapScreenState extends ConsumerState<HomeMapScreen> {
               target: _kampalaCenter,
               zoom: 14.5,
             ),
-            markers: _markers,
+            markers: {
+              ...?_buildTaxiMarkers(
+                taxiAsync.value ?? [],
+                isDark,
+              ),
+              ..._markers,
+            },
+            //markers: _markers,
             onMapCreated: (controller) {
               setState(() {
                 _mapController = controller;
@@ -547,19 +652,34 @@ class _HomeMapScreenState extends ConsumerState<HomeMapScreen> {
                               ],
                             ),
                           ),
-                          const SizedBox(height: 16),
+                          //new morph code for button scan smart rings
                           SizedBox(
                             height: 60,
                             width: double.infinity,
                             child: Padding(
                               padding: const EdgeInsets.symmetric(horizontal: 24),
                               child: MorphingActionButton(
+                                isScanning: _isScanning,
                                 onScanningStarted: () {
                                   _searchJourneys();
                                 },
                               ),
                             ),
                           ),
+                          //end of morph code
+                          //const SizedBox(height: 16),
+                          //SizedBox(
+                            //height: 60,
+                            //width: double.infinity,
+                            //child: Padding(
+                              //padding: const EdgeInsets.symmetric(horizontal: 24),
+                              //child: MorphingActionButton(
+                                //onScanningStarted: () {
+                                  //_searchJourneys();
+                                //},
+                              //),
+                            //),
+                          //),
                         ],
                       ),
                     ),
