@@ -4,6 +4,8 @@ import * as admin from "firebase-admin";
 export * from "./escrow_functions";
 export * from "./chat_functions";
 export * from "./assistant_functions";
+export * from "./market_data_functions";
+export * from "./traffic_functions";
 
 if (admin.apps.length === 0) {
   admin.initializeApp();
