@@ -14,7 +14,6 @@ export const findMultimodalJourney = functions.https.onCall(async (data, context
     throw new functions.https.HttpsError("invalid-argument", "Origin and destination required");
   }
 
-  // Get all active taxis
   const taxisSnapshot = await db.collection("taxis")
     .where("status", "in", ["LOADING", "EN_ROUTE"])
     .get();
@@ -32,16 +31,25 @@ export const findMultimodalJourney = functions.https.onCall(async (data, context
     const destIndex = route.findIndex((s: string) => s.toLowerCase() === destination.toLowerCase());
 
     if (originIndex !== -1 && destIndex !== -1 && destIndex > originIndex) {
+      const travelTime = (destIndex - originIndex) * 10;
+      const fare = taxi.fare_board?.[route[originIndex]]?.[route[destIndex]] || 0;
+
       journeys.push({
-        type: "direct",
-        total_time_min: (destIndex - originIndex) * 10,
-        total_fare: taxi.fare_board?.[route[originIndex]]?.[route[destIndex]] || 0,
+        total_time_min: travelTime,
+        total_fare: fare,
         legs: [{
+          walk_min: 0,
+          stage: route[originIndex],
+          stage_id: route[originIndex],
+          matatu_plate: taxi.plate,
+          matatu_id: taxi.id,
           vehicle_type: taxi.vehicle_type || 'taxi',
-          plate: taxi.plate,
-          from: route[originIndex],
-          to: route[destIndex],
-          seats_available: taxi.seats_available,
+          departure: "Now",
+          arrival: `${travelTime} min`,
+          destination: route[destIndex],
+          fare: fare,
+          space: taxi.seat_state === "space_available" ? "🟢 Space Available" :
+                 taxi.seat_state === "filling_up" ? "🟠 Filling Up" : "🔴 Full"
         }]
       });
     }
@@ -63,7 +71,6 @@ export const findMultimodalJourney = functions.https.onCall(async (data, context
 
         if (destIndex2 === -1) continue;
 
-        // Find common stage
         for (let i = originIndex1; i < route1.length; i++) {
           const commonStage = route1[i];
           const commonIndex2 = route2.findIndex((s: string) => s.toLowerCase() === commonStage.toLowerCase());
@@ -74,23 +81,36 @@ export const findMultimodalJourney = functions.https.onCall(async (data, context
             const transferTime = 10;
 
             journeys.push({
-              type: "multimodal",
               total_time_min: leg1Time + transferTime + leg2Time,
               total_fare: 0,
               legs: [
                 {
+                  walk_min: 0,
+                  stage: route1[originIndex1],
+                  stage_id: route1[originIndex1],
+                  matatu_plate: taxi1.plate,
+                  matatu_id: taxi1.id,
                   vehicle_type: taxi1.vehicle_type || 'taxi',
-                  plate: taxi1.plate,
-                  from: route1[originIndex1],
-                  to: commonStage,
-                  seats_available: taxi1.seats_available,
+                  departure: "Now",
+                  arrival: `${leg1Time} min`,
+                  destination: commonStage,
+                  fare: 0,
+                  space: taxi1.seat_state === "space_available" ? "🟢 Space Available" :
+                         taxi1.seat_state === "filling_up" ? "🟠 Filling Up" : "🔴 Full"
                 },
                 {
+                  walk_min: 0,
+                  stage: commonStage,
+                  stage_id: commonStage,
+                  matatu_plate: taxi2.plate,
+                  matatu_id: taxi2.id,
                   vehicle_type: taxi2.vehicle_type || 'taxi',
-                  plate: taxi2.plate,
-                  from: commonStage,
-                  to: route2[destIndex2],
-                  seats_available: taxi2.seats_available,
+                  departure: `+${leg1Time + transferTime} min`,
+                  arrival: `${leg2Time} min`,
+                  destination: route2[destIndex2],
+                  fare: 0,
+                  space: taxi2.seat_state === "space_available" ? "🟢 Space Available" :
+                         taxi2.seat_state === "filling_up" ? "🟠 Filling Up" : "🔴 Full"
                 }
               ]
             });
