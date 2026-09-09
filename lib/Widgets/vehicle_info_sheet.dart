@@ -1,8 +1,36 @@
 import 'package:flutter/material.dart';
+import 'package:geolocator/geolocator.dart';
 import '../Config/theme.dart';
 import '../Providers/taxi_stream_provider.dart';
+import '../Services/eta_service.dart';
 
-void showVehicleInfoSheet(BuildContext context, TaxiVehicle taxi) {
+void showVehicleInfoSheet(
+    BuildContext context,
+    TaxiVehicle taxi, {
+      Position? passengerPosition,
+    }) {
+  String etaText = 'ETA: --';
+  String distanceText = '';
+
+  if (passengerPosition != null && taxi.speed > 0) {
+    final distance = EtaService.distanceInKm(
+      lat1: passengerPosition.latitude,
+      lng1: passengerPosition.longitude,
+      lat2: taxi.lat,
+      lng2: taxi.lng,
+    );
+
+    final eta = EtaService.calculateETA(
+      distanceKm: distance,
+      speedKmh: taxi.speed,
+    );
+
+    etaText = 'ETA: ${eta.toStringAsFixed(0)} min';
+    distanceText = '${distance.toStringAsFixed(1)} km away';
+  } else if (taxi.speed > 0) {
+    etaText = 'Speed: ${taxi.speed.toStringAsFixed(0)} km/h';
+  }
+
   showModalBottomSheet(
     context: context,
     backgroundColor: Colors.transparent,
@@ -77,6 +105,35 @@ void showVehicleInfoSheet(BuildContext context, TaxiVehicle taxi) {
                     ? Icons.check_circle
                     : Icons.warning,
               ),
+            ],
+          ),
+          const SizedBox(height: 12),
+          Row(
+            children: [
+              const Icon(
+                Icons.schedule,
+                size: 16,
+                color: SmartStageColors.primaryBlue,
+              ),
+              const SizedBox(width: 6),
+              Text(
+                etaText,
+                style: const TextStyle(
+                  fontSize: 14,
+                  fontWeight: FontWeight.w600,
+                  color: Color(0xFF1E293B),
+                ),
+              ),
+              if (distanceText.isNotEmpty) ...[
+                const Spacer(),
+                Text(
+                  distanceText,
+                  style: const TextStyle(
+                    fontSize: 12,
+                    color: Color(0xFF64748B),
+                  ),
+                ),
+              ],
             ],
           ),
           const SizedBox(height: 20),

@@ -6,6 +6,7 @@ export * from "./chat_functions";
 export * from "./assistant_functions";
 export * from "./market_data_functions";
 export * from "./traffic_functions";
+export * from "./alert_functions";
 
 if (admin.apps.length === 0) {
   admin.initializeApp();

@@ -11,7 +11,7 @@ const db = admin.firestore();
 const GEMINI_API_KEY = "AQ.Ab8RN6KC89WrKHykYhJwTkMMaXAhxugvvXN77i9laQosZWKjpQ"; // Replace with your key
 
 export const fetchMarketData = functions.pubsub
-  .schedule("0 6 * * *")
+  .schedule("0 * * * *") //changed to hourly
   .timeZone("Africa/Kampala")
   .onRun(async () => {
     try {

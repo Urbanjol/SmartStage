@@ -1,10 +1,12 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:geolocator/geolocator.dart';
 import 'package:google_maps_flutter/google_maps_flutter.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:cloud_functions/cloud_functions.dart';
 import '../Screens/assistant_screen.dart';
 import '../Config/theme.dart';
+import '../Services/passenger_location.dart';
 import '../Widgets/primary_action_button.dart';
 import '../Widgets/price_tag.dart';
 import '../Widgets/error_message.dart';
@@ -28,6 +30,7 @@ class _HomeMapScreenState extends ConsumerState<HomeMapScreen> {
   final TextEditingController _destinationController = TextEditingController();
   GoogleMapController? _mapController;
   List<Journey> _journeys = [];
+  Position? _passengerPosition;
   bool _isSearching = false;
   bool _isScanning = false;
   Set<Marker> _markers = {};
@@ -42,6 +45,7 @@ class _HomeMapScreenState extends ConsumerState<HomeMapScreen> {
   void initState() {
     super.initState();
     _pickupController.text = "Current Location (Kampala Stage)";
+    _loadPassengerLocation();
   }
 
 //new searchJourney function
@@ -51,6 +55,9 @@ class _HomeMapScreenState extends ConsumerState<HomeMapScreen> {
       setState(() => _errorMessage = "Please enter a destination");
       return;
     }
+
+    //Position? _passengerPosition;
+
 
     setState(() {
       _isSearching = true;
@@ -99,7 +106,15 @@ class _HomeMapScreenState extends ConsumerState<HomeMapScreen> {
     }
   }
   //end of the function
+  Future<void> _loadPassengerLocation() async {
+    final position = await PassengerLocationService.getCurrentLocation();
 
+    if (position != null && mounted) {
+      setState(() {
+        _passengerPosition = position;
+      });
+    }
+  }
   Future<void> _searchJourneys2() async {
     final destination = _destinationController.text.trim();
     if (destination.isEmpty) {
@@ -269,7 +284,7 @@ class _HomeMapScreenState extends ConsumerState<HomeMapScreen> {
           markerId: MarkerId(taxi.id),
           position: LatLng(taxi.lat, taxi.lng),
           onTap: () {
-            showVehicleInfoSheet(context,taxi);
+            showVehicleInfoSheet(context,taxi,passengerPosition: _passengerPosition);
           },
           icon: BitmapDescriptor.defaultMarkerWithHue(
             taxi.vehicleType == 'e_bus'

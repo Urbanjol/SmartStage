@@ -212,6 +212,96 @@ class ActiveRouteTrafficCard extends StatelessWidget {
   }
 }
 //end
+//new card for combined cards
+class DemandFuelRow extends StatelessWidget {
+  final String busyHours;
+  final String hotStages;
+  final List<dynamic> prices;
+
+  const DemandFuelRow({
+    Key? key,
+    required this.busyHours,
+    required this.hotStages,
+    required this.prices,
+  }) : super(key: key);
+
+  @override
+  Widget build(BuildContext context) {
+    return Row(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Expanded(
+          child: DemandPulseCard(
+            busyHours: busyHours,
+            hotStages: hotStages,
+          ),
+        ),
+        const SizedBox(width: 8),
+        Expanded(
+          child: FuelPricesCard(prices: prices),
+        ),
+      ],
+    );
+  }
+}
+
+class RequestActionCard extends StatelessWidget {
+  final String title;
+  final int count;
+  final IconData icon;
+  final Color color;
+  final VoidCallback onTap;
+
+  const RequestActionCard({
+    Key? key,
+    required this.title,
+    required this.count,
+    required this.icon,
+    required this.color,
+    required this.onTap,
+  }) : super(key: key);
+
+  @override
+  Widget build(BuildContext context) {
+    return Expanded(
+      child: GestureDetector(
+        onTap: onTap,
+        child: Container(
+          padding: const EdgeInsets.all(16),
+          decoration: BoxDecoration(
+            color: Colors.white,
+            borderRadius: BorderRadius.circular(12),
+            border: Border.all(color: color.withOpacity(0.3)),
+          ),
+          child: Column(
+            children: [
+              Icon(icon, color: color, size: 28),
+              const SizedBox(height: 8),
+              Text(
+                title,
+                style: const TextStyle(
+                  fontSize: 12,
+                  fontWeight: FontWeight.bold,
+                  color: Color(0xFF1E293B),
+                ),
+              ),
+              const SizedBox(height: 4),
+              Text(
+                '$count',
+                style: TextStyle(
+                  fontSize: 20,
+                  fontWeight: FontWeight.bold,
+                  color: color,
+                ),
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+}
+//end of it
 //traffic cards
 class TrafficCard extends StatelessWidget {
   final List<dynamic> traffic;
@@ -407,11 +497,48 @@ class DemandPulseCard extends StatelessWidget {
     );
   }
 }
-
+//new fuel prices card
 class FuelPricesCard extends StatelessWidget {
   final List<dynamic> prices;
 
   const FuelPricesCard({Key? key, required this.prices}) : super(key: key);
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      padding: const EdgeInsets.all(12),
+      decoration: BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(12),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          const Text('FUEL PRICES', style: TextStyle(fontSize: 10, color: Colors.grey)),
+          const SizedBox(height: 8),
+          if (prices.isEmpty)
+            const Text('No fuel data yet')
+          else
+            ...prices.take(3).map((price) {
+              final map = price as Map<String, dynamic>;
+              return Padding(
+                padding: const EdgeInsets.symmetric(vertical: 3),
+                child: Text(
+                  '⛽ ${map['company']}  P ${map['petrol']}  D ${map['diesel']}',
+                  style: const TextStyle(fontSize: 10),
+                ),
+              );
+            }).toList(),
+        ],
+      ),
+    );
+  }
+}
+//end of fuel prices card
+class FuelPricesCard2 extends StatelessWidget {
+  final List<dynamic> prices;
+
+  const FuelPricesCard2({Key? key, required this.prices}) : super(key: key);
 
   @override
   Widget build(BuildContext context) {

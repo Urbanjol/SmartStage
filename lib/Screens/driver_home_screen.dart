@@ -12,6 +12,7 @@ import '../Providers/fuel_data_provider.dart';
 import '../Widgets/driver_cards.dart';
 import '../Providers/market_data_provider.dart';
 import '../Services/traffic_service.dart';
+import '../Services/location.dart';
 
 class DriverHomeScreen extends ConsumerStatefulWidget {
   final String userId;
@@ -58,6 +59,40 @@ class _DriverHomeScreenState extends ConsumerState<DriverHomeScreen> {
     });
     _loadParcelRequestCount();
     _loadBookingRequestCount();
+    if (_isOnline) {
+      DriverLocationService.startLocationUpdates(widget.matatuId);
+    }
+  }
+
+  Future<void> _endRoute() async {
+    setState(() {
+      _status = 'LOADING';
+      _seatState = 'space_available';
+      _seatsAvailable = 14;
+    });
+
+    try {
+      await FirebaseFirestore.instance
+          .collection('taxis')
+          .doc(widget.matatuId)
+          .update({
+        'status': 'LOADING',
+        'seat_state': 'space_available',
+        'seats_available': 14,
+        'route': [],
+      });
+
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text('Route ended'),
+            backgroundColor: Color(0xFF10B981),
+          ),
+        );
+      }
+    } catch (e) {
+      // Silently fail
+    }
   }
 
   Future<void> _loadTraffic() async {
@@ -164,7 +199,11 @@ class _DriverHomeScreenState extends ConsumerState<DriverHomeScreen> {
 
   Future<void> _toggleOnline() async {
     setState(() => _isOnline = !_isOnline);
-
+    if (_isOnline) {
+      await DriverLocationService.startLocationUpdates(widget.matatuId);
+    } else {
+      await DriverLocationService.stopLocationUpdates();
+    }
     try {
       final newStatus = _isOnline ? 'LOADING' : 'OFF_DUTY';
       final callable =
@@ -294,9 +333,8 @@ class _DriverHomeScreenState extends ConsumerState<DriverHomeScreen> {
               routeText: widget.routeNames.isNotEmpty
                   ? widget.routeNames.join(' → ')
                   : 'No active route',
-              onEndRoute: () {
-                // End route logic
-              },
+                  onEndRoute: _endRoute,
+
             ),
             const SizedBox(height: 12),
             ActiveRouteTrafficCard(
@@ -334,55 +372,48 @@ class _DriverHomeScreenState extends ConsumerState<DriverHomeScreen> {
               ],
             ),
             const SizedBox(height: 12),
-            DemandPulseCard(
+            DemandFuelRow(
               busyHours: stats.busyHours,
               hotStages: stats.hotStages,
+              prices: marketData?.fuel ?? [],
             ),
             const SizedBox(height: 12),
-            FuelPricesCard(prices: marketData?.fuel ?? []),
-            const SizedBox(height: 12),
+            //FuelPricesCard(prices: marketData?.fuel ?? []),
+            //const SizedBox(height: 12),
             TrafficCard(traffic: marketData?.traffic ?? []),
             const SizedBox(height: 12),
             FuelNewsCard(news: marketData?.news ?? []),
             const SizedBox(height: 12),
             Row(
               children: [
-                Expanded(
-                  child: GlowButton(
-                    text: 'BOOKING (${_bookingRequestCount})',
-                    color: const Color(0xFFFFB800),
-                    glowColor: const Color(0xFFFFB800).withOpacity(0.4),
-                    icon: Icons.inbox_outlined,
-                    onPressed: () {
-                      Navigator.push(
-                        context,
-                        MaterialPageRoute(
-                          builder: (context) => const DriverRequestsScreen(),
-                        ),
-                      ).then((_) => _loadBookingRequestCount());
-                    },
-                  ),
+                RequestActionCard(
+                  title: 'BOOKING',
+                  count: _bookingRequestCount,
+                  icon: Icons.inbox_outlined,
+                  color: const Color(0xFF2563EB),
+                  onTap: () {
+                    Navigator.push(
+                      context,
+                      MaterialPageRoute(
+                        builder: (context) => const DriverRequestsScreen(),
+                      ),
+                    ).then((_) => _loadBookingRequestCount());
+                  },
                 ),
-              ],
-            ),
-            const SizedBox(height: 8),
-            Row(
-              children: [
-                Expanded(
-                  child: GlowButton(
-                    text: 'PARCEL (${_parcelRequestCount})',
-                    color: const Color(0xFF7B2FF7),
-                    glowColor: const Color(0xFF7B2FF7).withOpacity(0.4),
-                    icon: Icons.inventory_2_outlined,
-                    onPressed: () {
-                      Navigator.push(
-                        context,
-                        MaterialPageRoute(
-                          builder: (context) => const DriverParcelRequestsScreen(),
-                        ),
-                      ).then((_) => _loadParcelRequestCount());
-                    },
-                  ),
+                const SizedBox(width: 8),
+                RequestActionCard(
+                  title: 'PARCEL',
+                  count: _parcelRequestCount,
+                  icon: Icons.inventory_2_outlined,
+                  color: const Color(0xFF10B981),
+                  onTap: () {
+                    Navigator.push(
+                      context,
+                      MaterialPageRoute(
+                        builder: (context) => const DriverParcelRequestsScreen(),
+                      ),
+                    ).then((_) => _loadParcelRequestCount());
+                  },
                 ),
               ],
             ),

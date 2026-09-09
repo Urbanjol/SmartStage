@@ -11,6 +11,7 @@ class TaxiVehicle {
   final String seatState;
   final int seatsAvailable;
   final List<String> route;
+  final double speed;
 
   TaxiVehicle({
     required this.id,
@@ -22,6 +23,7 @@ class TaxiVehicle {
     required this.seatState,
     required this.seatsAvailable,
     required this.route,
+    required this.speed,
   });
 
   factory TaxiVehicle.fromMap(Map<String, dynamic> map, String id) {
@@ -45,6 +47,7 @@ class TaxiVehicle {
       seatState: map['seat_state'] ?? 'space_available',
       seatsAvailable: (map['seats_available'] as num?)?.toInt() ?? 0,
       route: List<String>.from(map['route'] ?? []),
+      speed: (map['speed'] as num?)?.toDouble() ?? 0,
     );
   }
 
