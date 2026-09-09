@@ -7,6 +7,7 @@ export * from "./assistant_functions";
 export * from "./market_data_functions";
 export * from "./traffic_functions";
 export * from "./alert_functions";
+export * from "./multi_modal_functions";
 
 if (admin.apps.length === 0) {
   admin.initializeApp();

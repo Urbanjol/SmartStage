@@ -47,9 +47,100 @@ class _HomeMapScreenState extends ConsumerState<HomeMapScreen> {
     _pickupController.text = "Current Location (Kampala Stage)";
     _loadPassengerLocation();
   }
-
-//new searchJourney function
+//new search journey with multi modal
   Future<void> _searchJourneys() async {
+    final destination = _destinationController.text.trim();
+    if (destination.isEmpty) {
+      setState(() => _errorMessage = "Please enter a destination");
+      return;
+    }
+
+    setState(() {
+      _isSearching = true;
+      _isScanning = true;
+      _errorMessage = null;
+      _journeys = [];
+    });
+
+    try {
+      // Try direct first
+      final callable =
+      FirebaseFunctions.instance.httpsCallable('findJourney');
+      final result = await callable.call({
+        'origin': {
+          'lat': _kampalaCenter.latitude,
+          'lng': _kampalaCenter.longitude,
+        },
+        'destination': destination,
+        'preference': 'fastest',
+      });
+
+      final data = result.data as Map<String, dynamic>;
+      final journeysList = data['journeys'] as List<dynamic>? ?? [];
+
+      setState(() {
+        _journeys = journeysList
+            .map((j) => Journey.fromJson(Map<String, dynamic>.from(j as Map)))
+            .toList();
+
+        _isSearching = false;
+        _isScanning = false;
+
+        if (_journeys.isEmpty) {
+          _errorMessage = "No direct routes found. Trying connections...";
+        }
+      });
+
+      if (_journeys.isEmpty) {
+        await _tryMultimodalSearch(destination);
+      } else {
+        _showJourneyResults();
+      }
+    } catch (e) {
+      setState(() {
+        _isSearching = false;
+        _isScanning = false;
+        _errorMessage = "Search failed: $e";
+      });
+    }
+  }
+
+  Future<void> _tryMultimodalSearch(String destination) async {
+    try {
+      final callable =
+      FirebaseFunctions.instance.httpsCallable('findMultimodalJourney');
+      final result = await callable.call({
+        'origin': 'Old Taxi Park',
+        'destination': destination,
+      });
+
+      final data = result.data as Map<String, dynamic>;
+      final journeysList = data['journeys'] as List<dynamic>? ?? [];
+
+      setState(() {
+        _journeys = journeysList
+            .map((j) => Journey.fromJson(Map<String, dynamic>.from(j as Map)))
+            .toList();
+        _isScanning = false;
+
+        if (_journeys.isEmpty) {
+          _errorMessage = "No routes found to $destination";
+        }
+      });
+
+      if (_journeys.isNotEmpty) {
+        _showJourneyResults();
+      }
+    } catch (e) {
+      setState(() {
+        _isScanning = false;
+        _errorMessage = "Could not find connections: $e";
+      });
+    }
+  }
+  //end
+//new searchJourney function
+  Future<void> _searchJourneys2() async {
     final destination = _destinationController.text.trim();
     if (destination.isEmpty) {
       setState(() => _errorMessage = "Please enter a destination");
@@ -115,7 +206,7 @@ class _HomeMapScreenState extends ConsumerState<HomeMapScreen> {
       });
     }
   }
-  Future<void> _searchJourneys2() async {
+  Future<void> _searchJourneys3() async {
     final destination = _destinationController.text.trim();
     if (destination.isEmpty) {
       setState(() => _errorMessage = "Please enter a destination");
