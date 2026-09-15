@@ -17,6 +17,7 @@ import '../Widgets/journey_results_sheet.dart';
 import '../Screens/add_stage_screen.dart';
 import '../Providers/taxi_stream_provider.dart';
 import '../Widgets/vehicle_info_sheet.dart';
+import '../Providers/search_history_provider.dart';
 
 class HomeMapScreen extends ConsumerStatefulWidget {
   const HomeMapScreen({Key? key}) : super(key: key);
@@ -34,6 +35,7 @@ class _HomeMapScreenState extends ConsumerState<HomeMapScreen> {
   bool _isSearching = false;
   bool _isScanning = false;
   Set<Marker> _markers = {};
+  bool _showHeatmap = true;
 
   final LatLng _kampalaCenter = const LatLng(0.3136, 32.5811);
 
@@ -360,6 +362,38 @@ class _HomeMapScreenState extends ConsumerState<HomeMapScreen> {
     }
   }
 //method to build markers from taxis
+  Set<Marker> _buildAllMarkers(List<TaxiVehicle> taxis) {
+    final markers = <Marker>{};
+
+    for (final taxi in taxis) {
+      markers.add(
+        Marker(
+          markerId: MarkerId(taxi.id),
+          position: LatLng(taxi.lat, taxi.lng),
+          onTap: () {
+            showVehicleInfoSheet(
+              context,
+              taxi,
+              passengerPosition: _passengerPosition,
+            );
+          },
+          icon: BitmapDescriptor.defaultMarkerWithHue(
+            taxi.vehicleType == 'e_bus'
+                ? BitmapDescriptor.hueGreen
+                : taxi.vehicleType == 'bus'
+                ? BitmapDescriptor.hueViolet
+                : BitmapDescriptor.hueBlue,
+          ),
+        ),
+      );
+    }
+
+    return markers;
+  }
+
+
+
+
   Set<Marker> _buildTaxiMarkers(List<TaxiVehicle> taxis, bool isDark) {
     final markers = <Marker>{};
 
@@ -391,6 +425,34 @@ class _HomeMapScreenState extends ConsumerState<HomeMapScreen> {
     return markers;
   }
   //end of method
+
+  //new
+  Set<Circle> _buildHeatCircles(List<SearchPoint> points) {
+    final circles = <Circle>{};
+
+    for (int i = 0; i < points.length; i++) {
+      final point = points[i];
+      final intensity = (point.count / 10).clamp(0.1, 1.0);
+
+      circles.add(
+        Circle(
+          circleId: CircleId('heat_$i'),
+          center: LatLng(point.lat, point.lng),
+          radius: 200 + (point.count * 30).toDouble(),
+          fillColor: Color.lerp(
+            Colors.yellow.withOpacity(0.3),
+            Colors.red.withOpacity(0.4),
+            intensity,
+          )!,
+          strokeColor: Colors.transparent,
+          strokeWidth: 0,
+        ),
+      );
+    }
+
+    return circles;
+  }
+  //end
   Future<void> _searchNearbyTaxis2() async {
     setState(() {
       _isLoadingDrivers = true;
@@ -466,6 +528,8 @@ class _HomeMapScreenState extends ConsumerState<HomeMapScreen> {
   Widget build(BuildContext context) {
     final isDark = Theme.of(context).brightness == Brightness.dark;
     final taxiAsync = ref.watch(taxiStreamProvider);
+    final heatAsync = ref.watch(searchHistoryProvider);
+    final heatPoints = heatAsync.value ?? [];
 
     return Scaffold(
       body: Stack(
@@ -474,15 +538,17 @@ class _HomeMapScreenState extends ConsumerState<HomeMapScreen> {
             initialCameraPosition: CameraPosition(
               target: _kampalaCenter,
               zoom: 14.5,
+              tilt: 45,
             ),
             markers: {
-              ...?_buildTaxiMarkers(
+              ...?_buildAllMarkers(
                 taxiAsync.value ?? [],
-                isDark,
+                //isDark,
               ),
               ..._markers,
             },
             //markers: _markers,
+            circles: _showHeatmap ? _buildHeatCircles(heatPoints) : {},
             onMapCreated: (controller) {
               setState(() {
                 _mapController = controller;
@@ -493,42 +559,89 @@ class _HomeMapScreenState extends ConsumerState<HomeMapScreen> {
           SafeArea(
             child: Align(
               alignment: Alignment.topRight,
-              child: Padding(
-                padding: const EdgeInsets.only(top: 16, right: 16),
-                child: GestureDetector(
-                  onTap: () {
-                    Navigator.push(
-                      context,
-                      MaterialPageRoute(
-                        builder: (context) => const AddStageScreen(),
-                      ),
-                    );
-                  },
-                  child: Container(
-                    width: 48,
-                    height: 48,
-                    decoration: BoxDecoration(
-                      gradient: const LinearGradient(
-                        colors: [Color(0xFF2563EB), Color(0xFF7C3AED)],
-                        begin: Alignment.topLeft,
-                        end: Alignment.bottomRight,
-                      ),
-                      shape: BoxShape.circle,
-                      boxShadow: [
-                        BoxShadow(
-                          color: const Color(0xFF2563EB).withOpacity(0.4),
-                          blurRadius: 15,
-                          spreadRadius: 1,
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  Padding(
+                    padding: const EdgeInsets.only(top: 16, right: 16),
+                    child: GestureDetector(
+                      onTap: () {
+                        Navigator.push(
+                          context,
+                          MaterialPageRoute(
+                            builder: (context) => const AddStageScreen(),
+                          ),
+                        );
+                      },
+                      child: Container(
+                        width: 48,
+                        height: 48,
+                        decoration: BoxDecoration(
+                          gradient: const LinearGradient(
+                            colors: [Color(0xFF2563EB), Color(0xFF7C3AED)],
+                            begin: Alignment.topLeft,
+                            end: Alignment.bottomRight,
+                          ),
+                          shape: BoxShape.circle,
+                          boxShadow: [
+                            BoxShadow(
+                              color: const Color(0xFF2563EB).withOpacity(0.4),
+                              blurRadius: 15,
+                              spreadRadius: 1,
+                            ),
+                          ],
                         ),
-                      ],
-                    ),
-                    child: const Icon(
-                      Icons.add_location_alt_outlined,
-                      color: Colors.white,
-                      size: 24,
+                        child: const Icon(
+                          Icons.add_location_alt_outlined,
+                          color: Colors.white,
+                          size: 24,
+                        ),
+                      ),
                     ),
                   ),
-                ),
+                  const SizedBox(height: 12),
+                  Padding(
+                    padding: const EdgeInsets.only(right: 16),
+                    child: GestureDetector(
+                      onTap: () {
+                        setState(() {
+                          _showHeatmap = !_showHeatmap;
+                        });
+                      },
+                      child: Container(
+                        width: 48,
+                        height: 48,
+                        decoration: BoxDecoration(
+                          gradient: LinearGradient(
+                            colors: _showHeatmap
+                                ? [const Color(0xFFEF4444), const Color(0xFFFFB800)]
+                                : [Colors.grey, Colors.grey.shade600],
+                            begin: Alignment.topLeft,
+                            end: Alignment.bottomRight,
+                          ),
+                          shape: BoxShape.circle,
+                          boxShadow: [
+                            BoxShadow(
+                              color: (_showHeatmap
+                                  ? const Color(0xFFEF4444)
+                                  : Colors.grey)
+                                  .withOpacity(0.4),
+                              blurRadius: 15,
+                              spreadRadius: 1,
+                            ),
+                          ],
+                        ),
+                        child: Icon(
+                          _showHeatmap
+                              ? Icons.local_fire_department
+                              : Icons.local_fire_department_outlined,
+                          color: Colors.white,
+                          size: 24,
+                        ),
+                      ),
+                    ),
+                  ),
+                ],
               ),
             ),
           ),
