@@ -44,6 +44,13 @@ class _DriverParcelRequestsScreenState
           color: SmartStageColors.electricGreen,
         ),
       )
+          : state.errorMessage != null
+          ? Center(
+        child: Text(
+          state.errorMessage!,
+          style: const TextStyle(color: Colors.red),
+        ),
+      )
           : state.availableParcels.isEmpty
           ? Center(
         child: Column(

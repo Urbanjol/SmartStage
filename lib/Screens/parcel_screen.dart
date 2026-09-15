@@ -3,6 +3,10 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../Config/theme.dart';
 import '../Providers/parcel_provider.dart';
 import '../models/parcel_model.dart';
+import '../Widgets/parcel_service_card.dart';
+import '../Widgets/current_tracking_card.dart';
+import '../Widgets/recent_order_card.dart';
+import 'parcel_map_screen.dart';
 
 class ParcelScreen extends ConsumerStatefulWidget {
   const ParcelScreen({Key? key}) : super(key: key);
@@ -40,6 +44,13 @@ class _ParcelScreenState extends ConsumerState<ParcelScreen> {
     super.dispose();
   }
 
+  void _searchTracking() {
+    final code = _trackingController.text.trim();
+    if (code.isEmpty) return;
+
+    ref.read(parcelProvider.notifier).trackParcel(code);
+  }
+
   void _showCreateParcelSheet() {
     showModalBottomSheet(
       context: context,
@@ -53,6 +64,20 @@ class _ParcelScreenState extends ConsumerState<ParcelScreen> {
         destinationController: _destinationController,
         fareController: _fareController,
         onCreate: () async {
+          if (_senderNameController.text.trim().isEmpty ||
+              _receiverNameController.text.trim().isEmpty ||
+              _receiverPhoneController.text.trim().isEmpty ||
+              _pickupController.text.trim().isEmpty ||
+              _destinationController.text.trim().isEmpty) {
+            ScaffoldMessenger.of(context).showSnackBar(
+              const SnackBar(
+                content: Text('Please fill all required fields'),
+                backgroundColor: SmartStageColors.red,
+              ),
+            );
+            return;
+          }
+
           final trackingCode = await ref
               .read(parcelProvider.notifier)
               .createParcel(
@@ -66,6 +91,7 @@ class _ParcelScreenState extends ConsumerState<ParcelScreen> {
 
           if (trackingCode != null && mounted) {
             _showSuccessDialog(trackingCode);
+            ref.read(parcelProvider.notifier).loadMyParcels();
           }
         },
       ),
@@ -76,9 +102,7 @@ class _ParcelScreenState extends ConsumerState<ParcelScreen> {
     showDialog(
       context: context,
       builder: (context) => AlertDialog(
-        backgroundColor: Theme.of(context).brightness == Brightness.dark
-            ? SmartStageColors.navyCard
-            : Colors.white,
+        backgroundColor: Colors.white,
         shape: RoundedRectangleBorder(
           borderRadius: BorderRadius.circular(20),
         ),
@@ -86,23 +110,18 @@ class _ParcelScreenState extends ConsumerState<ParcelScreen> {
           'PARCEL CREATED!',
           style: TextStyle(
             fontWeight: FontWeight.bold,
-            color: SmartStageColors.electricGreen,
+            color: SmartStageColors.primaryBlue,
           ),
         ),
         content: Column(
           mainAxisSize: MainAxisSize.min,
           children: [
-            const Text(
-              'Your parcel has been created.',
-              style: TextStyle(
-                color: SmartStageColors.greyDark,
-              ),
-            ),
+            const Text('Your parcel has been created.'),
             const SizedBox(height: 12),
             Container(
               padding: const EdgeInsets.all(12),
               decoration: BoxDecoration(
-                color: SmartStageColors.electricGreen.withOpacity(0.1),
+                color: SmartStageColors.primaryBlue.withOpacity(0.1),
                 borderRadius: BorderRadius.circular(12),
               ),
               child: Text(
@@ -110,17 +129,14 @@ class _ParcelScreenState extends ConsumerState<ParcelScreen> {
                 style: const TextStyle(
                   fontSize: 14,
                   fontWeight: FontWeight.bold,
-                  color: SmartStageColors.deepNavy,
+                  color: SmartStageColors.primaryBlue,
                 ),
               ),
             ),
             const SizedBox(height: 8),
             const Text(
               'Share this code with the receiver',
-              style: TextStyle(
-                fontSize: 12,
-                color: SmartStageColors.greyMid,
-              ),
+              style: TextStyle(fontSize: 12, color: Colors.grey),
             ),
           ],
         ),
@@ -130,74 +146,12 @@ class _ParcelScreenState extends ConsumerState<ParcelScreen> {
             child: const Text(
               'OK',
               style: TextStyle(
-                color: SmartStageColors.electricGreen,
+                color: SmartStageColors.primaryBlue,
                 fontWeight: FontWeight.bold,
               ),
             ),
           ),
         ],
-      ),
-    );
-  }
-
-  void _showTrackParcelSheet() {
-    showModalBottomSheet(
-      context: context,
-      isScrollControlled: true,
-      backgroundColor: Colors.transparent,
-      builder: (context) => Container(
-        decoration: BoxDecoration(
-          color: Theme.of(context).brightness == Brightness.dark
-              ? SmartStageColors.navyCard
-              : Colors.white,
-          borderRadius: const BorderRadius.only(
-            topLeft: Radius.circular(28),
-            topRight: Radius.circular(28),
-          ),
-        ),
-        padding: const EdgeInsets.all(24),
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            Container(
-              width: 36,
-              height: 4,
-              decoration: BoxDecoration(
-                color: SmartStageColors.greyLight,
-                borderRadius: BorderRadius.circular(2),
-              ),
-            ),
-            const SizedBox(height: 20),
-            const Text(
-              'TRACK PARCEL',
-              style: TextStyle(
-                fontSize: 18,
-                fontWeight: FontWeight.bold,
-                color: SmartStageColors.deepNavy,
-              ),
-            ),
-            const SizedBox(height: 20),
-            TextField(
-              controller: _trackingController,
-              decoration: const InputDecoration(
-                labelText: 'Tracking Code',
-                prefixIcon: Icon(Icons.search),
-              ),
-            ),
-            const SizedBox(height: 20),
-            GlowButton(
-              text: 'TRACK',
-              color: SmartStageColors.gold,
-              glowColor: SmartStageColors.goldGlow,
-              onPressed: () {
-                Navigator.pop(context);
-                ref
-                    .read(parcelProvider.notifier)
-                    .trackParcel(_trackingController.text.trim());
-              },
-            ),
-          ],
-        ),
       ),
     );
   }
@@ -205,192 +159,148 @@ class _ParcelScreenState extends ConsumerState<ParcelScreen> {
   @override
   Widget build(BuildContext context) {
     final state = ref.watch(parcelProvider);
-    final isDark = Theme.of(context).brightness == Brightness.dark;
+    final activeParcel = state.myParcels.isNotEmpty
+        ? state.myParcels.firstWhere(
+          (p) => p.status != ParcelStatus.delivered,
+      orElse: () => state.myParcels.first,
+    )
+        : null;
 
     return Scaffold(
-      backgroundColor: isDark
-          ? SmartStageColors.darkBackground
-          : SmartStageColors.lightBackground,
+      backgroundColor: const Color(0xFFF5F7FA),
       appBar: AppBar(
-        title: const Text('PARCEL DELIVERY'),
-        backgroundColor: isDark
-            ? SmartStageColors.deepNavy
-            : SmartStageColors.deepNavy,
-        actions: [
-          IconButton(
-            icon: const Icon(Icons.search),
-            onPressed: _showTrackParcelSheet,
-          ),
-        ],
+        title: const Text('PARCEL SERVICES'),
+        backgroundColor: const Color(0xFF1E293B),
+        elevation: 0,
       ),
-      body: Column(
-        children: [
-          Padding(
-            padding: const EdgeInsets.all(16),
-            child: GlowButton(
-              text: 'SEND A PARCEL',
-              color: SmartStageColors.primaryBlue,
-              glowColor: SmartStageColors.primaryBlue.withOpacity(0.4),
-              icon: Icons.add_box_outlined,
-              onPressed: _showCreateParcelSheet,
-            ),
-          ),
-          const SizedBox(height: 10),
-          Expanded(
-            child: state.isLoading
-                ? const Center(
-              child: CircularProgressIndicator(
-                color: SmartStageColors.electricGreen,
+      body: SingleChildScrollView(
+        padding: const EdgeInsets.all(12),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            // Search Bar
+            Container(
+              padding: const EdgeInsets.symmetric(horizontal: 16),
+              decoration: BoxDecoration(
+                color: Colors.white,
+                borderRadius: BorderRadius.circular(12),
               ),
-            )
-                : state.myParcels.isEmpty
-                ? Center(
-              child: Column(
-                mainAxisAlignment: MainAxisAlignment.center,
+              child: Row(
                 children: [
-                  Icon(
-                    Icons.inventory_2_outlined,
-                    size: 64,
-                    color: isDark
-                        ? SmartStageColors.greyDark
-                        : SmartStageColors.greyLight,
+                  const Icon(
+                    Icons.search,
+                    color: SmartStageColors.primaryBlue,
                   ),
-                  const SizedBox(height: 16),
-                  Text(
-                    'No Parcels Yet',
-                    style: TextStyle(
-                      fontSize: 16,
-                      fontWeight: FontWeight.bold,
-                      color: isDark
-                          ? SmartStageColors.greyMid
-                          : SmartStageColors.greyDark,
+                  const SizedBox(width: 8),
+                  Expanded(
+                    child: TextField(
+                      controller: _trackingController,
+                      decoration: const InputDecoration(
+                        hintText: 'Enter tracking code',
+                        border: InputBorder.none,
+                      ),
+                      onSubmitted: (_) => _searchTracking(),
                     ),
+                  ),
+                  IconButton(
+                    icon: const Icon(
+                      Icons.arrow_forward,
+                      color: SmartStageColors.primaryBlue,
+                    ),
+                    onPressed: _searchTracking,
                   ),
                 ],
               ),
-            )
-                : ListView.builder(
-              padding: const EdgeInsets.all(16),
-              itemCount: state.myParcels.length,
-              itemBuilder: (context, index) {
-                final parcel = state.myParcels[index];
-                return _ParcelCard(parcel: parcel);
-              },
             ),
-          ),
-        ],
-      ),
-    );
-  }
-}
+            const SizedBox(height: 12),
 
-class _ParcelCard extends StatelessWidget {
-  final ParcelModel parcel;
-
-  const _ParcelCard({required this.parcel});
-
-  @override
-  Widget build(BuildContext context) {
-    final isDark = Theme.of(context).brightness == Brightness.dark;
-
-    return Container(
-      margin: const EdgeInsets.only(bottom: 12),
-      padding: const EdgeInsets.all(16),
-      decoration: BoxDecoration(
-        color: isDark ? SmartStageColors.navyCard : SmartStageColors.white,
-        borderRadius: BorderRadius.circular(16),
-        border: Border.all(
-          color: isDark ? Colors.white10 : SmartStageColors.greyLight,
-        ),
-      ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Row(
-            mainAxisAlignment: MainAxisAlignment.spaceBetween,
-            children: [
-              Text(
-                parcel.trackingCode,
-                style: const TextStyle(
-                  fontSize: 12,
-                  fontWeight: FontWeight.bold,
-                  color: SmartStageColors.electricGreen,
-                ),
+            // Services Row
+            SingleChildScrollView(
+              scrollDirection: Axis.horizontal,
+              child: Row(
+                children: [
+                  ParcelServiceCard(
+                    title: 'Track Order',
+                    icon: Icons.search,
+                    color: const Color(0xFF2563EB),
+                    onTap: _searchTracking,
+                  ),
+                  const SizedBox(width: 8),
+                  ParcelServiceCard(
+                    title: 'Place Order',
+                    icon: Icons.add_box_outlined,
+                    color: const Color(0xFF10B981),
+                    onTap: _showCreateParcelSheet,
+                  ),
+                  const SizedBox(width: 8),
+                  ParcelServiceCard(
+                    title: 'Live Tracking',
+                    icon: Icons.map_outlined,
+                    color: const Color(0xFFFFB800),
+                    onTap: () {
+                      if (activeParcel != null) {
+                        Navigator.push(
+                          context,
+                          MaterialPageRoute(
+                            builder: (context) => ParcelMapScreen(
+                              parcel: activeParcel,
+                            ),
+                          ),
+                        );
+                      }
+                    },
+                  ),
+                ],
               ),
+            ),
+            const SizedBox(height: 20),
+
+            // Current Tracking
+            const Text(
+              'CURRENT TRACKING',
+              style: TextStyle(
+                fontSize: 12,
+                fontWeight: FontWeight.bold,
+                color: Colors.grey,
+                letterSpacing: 1,
+              ),
+            ),
+            const SizedBox(height: 8),
+            CurrentTrackingCard(parcel: activeParcel),
+            const SizedBox(height: 20),
+
+            // Recent Orders
+            const Text(
+              'RECENT ORDERS',
+              style: TextStyle(
+                fontSize: 12,
+                fontWeight: FontWeight.bold,
+                color: Colors.grey,
+                letterSpacing: 1,
+              ),
+            ),
+            const SizedBox(height: 8),
+            if (state.myParcels.isEmpty)
               Container(
-                padding:
-                const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
+                padding: const EdgeInsets.all(24),
                 decoration: BoxDecoration(
-                  color: SmartStageColors.purpleGlow,
+                  color: Colors.white,
                   borderRadius: BorderRadius.circular(12),
                 ),
-                child: Text(
-                  parcel.statusLabel,
-                  style: const TextStyle(
-                    fontSize: 10,
-                    fontWeight: FontWeight.bold,
-                    color: SmartStageColors.deepNavy,
+                child: const Center(
+                  child: Text(
+                    'No recent orders',
+                    style: TextStyle(color: Colors.grey),
                   ),
                 ),
-              ),
-            ],
-          ),
-          const SizedBox(height: 12),
-          Row(
-            children: [
-              const Icon(
-                Icons.location_on_outlined,
-                size: 16,
-                color: SmartStageColors.electricGreen,
-              ),
-              const SizedBox(width: 6),
-              Expanded(
-                child: Text(
-                  parcel.pickupStage,
-                  style: TextStyle(
-                    fontSize: 13,
-                    fontWeight: FontWeight.w600,
-                    color: isDark
-                        ? SmartStageColors.white
-                        : SmartStageColors.deepNavy,
-                  ),
-                ),
-              ),
-            ],
-          ),
-          const SizedBox(height: 6),
-          Row(
-            children: [
-              const Icon(
-                Icons.flag_outlined,
-                size: 16,
-                color: SmartStageColors.gold,
-              ),
-              const SizedBox(width: 6),
-              Expanded(
-                child: Text(
-                  parcel.destinationStage,
-                  style: TextStyle(
-                    fontSize: 13,
-                    fontWeight: FontWeight.w600,
-                    color: isDark
-                        ? SmartStageColors.white
-                        : SmartStageColors.deepNavy,
-                  ),
-                ),
-              ),
-            ],
-          ),
-          const SizedBox(height: 12),
-          Text(
-            'UGX ${parcel.fare.toStringAsFixed(0)}',
-            style: const TextStyle(
-              fontSize: 14,
-              fontWeight: FontWeight.w900,
-              color: SmartStageColors.gold,
-            ),
-          ),
-        ],
+              )
+            else
+              ...state.myParcels
+                  .take(5)
+                  .map((parcel) => RecentOrderCard(parcel: parcel))
+                  .toList(),
+          ],
+        ),
       ),
     );
   }
@@ -418,11 +328,9 @@ class _CreateParcelSheet extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Container(
-      decoration: BoxDecoration(
-        color: Theme.of(context).brightness == Brightness.dark
-            ? SmartStageColors.navyCard
-            : Colors.white,
-        borderRadius: const BorderRadius.only(
+      decoration: const BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.only(
           topLeft: Radius.circular(28),
           topRight: Radius.circular(28),
         ),
@@ -453,7 +361,7 @@ class _CreateParcelSheet extends StatelessWidget {
                 style: TextStyle(
                   fontSize: 18,
                   fontWeight: FontWeight.bold,
-                  color: SmartStageColors.deepNavy,
+                  color: Color(0xFF1E293B),
                 ),
               ),
               const SizedBox(height: 20),
@@ -509,12 +417,9 @@ class _CreateParcelSheet extends StatelessWidget {
               const SizedBox(height: 24),
               GlowButton(
                 text: 'CREATE PARCEL',
-                color: SmartStageColors.gold,
-                glowColor: SmartStageColors.goldGlow,
-                onPressed: () {
-                  Navigator.pop(context);
-                  onCreate();
-                },
+                color: SmartStageColors.primaryBlue,
+                glowColor: SmartStageColors.primaryBlue.withOpacity(0.4),
+                onPressed: onCreate,
               ),
             ],
           ),

@@ -39,6 +39,7 @@ class _DriverHomeScreenState extends ConsumerState<DriverHomeScreen> {
   String _status = 'LOADING';
   int _seatsAvailable = 14;
   bool _isOnline = true;
+  List<String> _activeRouteNames = [];
   int _parcelRequestCount = 0;
   int _bookingRequestCount = 0;
   bool _isBalanceVisible = true;
@@ -52,6 +53,7 @@ class _DriverHomeScreenState extends ConsumerState<DriverHomeScreen> {
   void initState() {
     super.initState();
     _loadDriverData();
+    _activeRouteNames = widget.routeNames;
     _loadBalance();
     _loadTraffic();
     Future.microtask(() {
@@ -69,6 +71,7 @@ class _DriverHomeScreenState extends ConsumerState<DriverHomeScreen> {
       _status = 'LOADING';
       _seatState = 'space_available';
       _seatsAvailable = 14;
+      _activeRouteNames = [];
     });
 
     try {
@@ -331,7 +334,8 @@ class _DriverHomeScreenState extends ConsumerState<DriverHomeScreen> {
             const SizedBox(height: 12),
             ActiveRouteCard(
               routeText: widget.routeNames.isNotEmpty
-                  ? widget.routeNames.join(' → ')
+                  //? widget.routeNames.join(' → ')
+                  ? _activeRouteNames.join(' -> ')
                   : 'No active route',
                   onEndRoute: _endRoute,
 

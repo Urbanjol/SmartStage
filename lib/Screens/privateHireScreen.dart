@@ -1,10 +1,13 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:cloud_functions/cloud_functions.dart';
+import 'package:firebase_auth/firebase_auth.dart';
+import 'package:url_launcher/url_launcher.dart';
+import 'dart:math';
 import '../Config/theme.dart';
-import '../Providers/PrivateHireProvider.dart';
-import '../models/Booking_model.dart';
-import 'driver_request_screen.dart';
+import '../Widgets/destination_card.dart';
+import '../Widgets/nearby_driver_card.dart';
 
 class PrivateHireScreen extends ConsumerStatefulWidget {
   const PrivateHireScreen({Key? key}) : super(key: key);
@@ -14,34 +17,73 @@ class PrivateHireScreen extends ConsumerStatefulWidget {
 }
 
 class _PrivateHireScreenState extends ConsumerState<PrivateHireScreen> {
-  EventType _selectedEvent = EventType.wedding;
-  final TextEditingController _pickupController = TextEditingController();
   final TextEditingController _destinationController = TextEditingController();
-  final TextEditingController _descriptionController = TextEditingController();
-  final TextEditingController _passengersController = TextEditingController();
+  List<Map<String, dynamic>> _places = [];
+  List<Map<String, dynamic>> _drivers = [];
+  bool _isSearching = false;
+  String? _errorMessage;
 
-  int _bookingRequestCount = 0;
+  static const double _originLat = 0.3136;
+  static const double _originLng = 32.5811;
 
   @override
   void initState() {
     super.initState();
-    Future.microtask(() {
-      ref.read(privateHireProvider.notifier).loadMyBookings();
-      ref.read(privateHireProvider.notifier).loadNearbyDrivers();
-      _loadBookingRequestCount();
-    });
+    _loadDrivers();
   }
 
-  Future<void> _loadBookingRequestCount() async {
+  @override
+  void dispose() {
+    _destinationController.dispose();
+    super.dispose();
+  }
+
+  double _calculateDistance(double lat1, double lng1, double lat2, double lng2) {
+    const R = 6371;
+    final dLat = _toRadians(lat2 - lat1);
+    final dLng = _toRadians(lng2 - lng1);
+
+    final a = sin(dLat / 2) * sin(dLat / 2) +
+        cos(_toRadians(lat1)) *
+            cos(_toRadians(lat2)) *
+            sin(dLng / 2) *
+            sin(dLng / 2);
+
+    final c = 2 * atan2(sqrt(a), sqrt(1 - a));
+    return R * c;
+  }
+
+  double _toRadians(double degree) {
+    return degree * pi / 180;
+  }
+
+  int _calculateFare(double distanceKm) {
+    // Base fare 3000 UGX + 500 UGX per km
+    return (3000 + (distanceKm * 500)).round();
+  }
+
+  Future<void> _loadDrivers() async {
     try {
       final snapshot = await FirebaseFirestore.instance
-          .collection('bookings')
-          .where('status', isEqualTo: 'searching')
+          .collection('taxis')
+          .where('status', whereIn: ['LOADING', 'EN_ROUTE'])
+          .limit(10)
           .get();
 
       if (mounted) {
         setState(() {
-          _bookingRequestCount = snapshot.docs.length;
+          _drivers = snapshot.docs.map((doc) {
+            final data = doc.data();
+            return {
+              'id': doc.id,
+              'plate': data['plate'] ?? 'Unknown',
+              'name': data['driver_name'] ?? 'Driver',
+              'phone': data['driver_phone'] ?? '',
+              'destination': (data['route'] as List?)?.isNotEmpty == true
+                  ? data['route'].last
+                  : 'Unknown',
+            };
+          }).toList();
         });
       }
     } catch (e) {
@@ -49,538 +91,307 @@ class _PrivateHireScreenState extends ConsumerState<PrivateHireScreen> {
     }
   }
 
-  @override
-  void dispose() {
-    _pickupController.dispose();
-    _destinationController.dispose();
-    _descriptionController.dispose();
-    _passengersController.dispose();
-    super.dispose();
+  Future<void> _searchPlaces(String query) async {
+    if (query.trim().isEmpty) {
+      setState(() => _errorMessage = 'Please enter a destination');
+      return;
+    }
+
+    setState(() {
+      _isSearching = true;
+      _errorMessage = null;
+      _places = [];
+    });
+
+    try {
+      final callable =
+      FirebaseFunctions.instance.httpsCallable('searchPlaces');
+      final result = await callable.call({
+        'query': query.trim(),
+      });
+
+      final data = result.data as Map<String, dynamic>;
+      final places = data['places'] as List<dynamic>? ?? [];
+
+      setState(() {
+        _places = places
+            .map((p) => Map<String, dynamic>.from(p as Map))
+            .toList();
+        _isSearching = false;
+
+        if (_places.isEmpty) {
+          _errorMessage = 'No places found for "$query"';
+        }
+      });
+    } catch (e) {
+      setState(() {
+        _isSearching = false;
+        _errorMessage = 'Search failed: $e';
+      });
+    }
   }
 
-  void _showCreateBookingSheet() {
-    showModalBottomSheet(
-      context: context,
-      isScrollControlled: true,
-      backgroundColor: Colors.transparent,
-      builder: (context) => _CreateBookingSheet(
-        selectedEvent: _selectedEvent,
-        pickupController: _pickupController,
-        destinationController: _destinationController,
-        descriptionController: _descriptionController,
-        passengersController: _passengersController,
-        onCreate: () async {
-          final bookingId = await ref
-              .read(privateHireProvider.notifier)
-              .createBooking(
-            pickUpAddress: _pickupController.text.trim(),
-            destinationAddress: _destinationController.text.trim(),
-            pickUph3: 'kampala_h3',
-            destinationH3: 'destination_h3',
-            eventType: _selectedEvent,
-            eventDate: DateTime.now().add(const Duration(days: 7)),
-            passengerCount:
-            int.tryParse(_passengersController.text.trim()) ?? 1,
-            eventDescription: _descriptionController.text.trim(),
-          );
+  Future<void> _bookDestination(Map<String, dynamic> place) async {
+    final user = FirebaseAuth.instance.currentUser;
 
-          if (bookingId != null && mounted) {
-            _showSuccessDialog();
-          }
-        },
-      ),
+    if (user == null) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text('Please login to book'),
+          backgroundColor: SmartStageColors.red,
+        ),
+      );
+      return;
+    }
+
+    final distance = _calculateDistance(
+      _originLat,
+      _originLng,
+      (place['lat'] as num).toDouble(),
+      (place['lng'] as num).toDouble(),
     );
-  }
 
-  void _showSuccessDialog() {
-    showDialog(
-      context: context,
-      builder: (context) => AlertDialog(
-        backgroundColor: Theme.of(context).brightness == Brightness.dark
-            ? SmartStageColors.navyCard
-            : Colors.white,
-        shape: RoundedRectangleBorder(
-          borderRadius: BorderRadius.circular(20),
-        ),
-        title: const Text(
-          'REQUEST SENT!',
-          style: TextStyle(
-            fontWeight: FontWeight.bold,
-            color: SmartStageColors.electricGreen,
-          ),
-        ),
-        content: const Text(
-          'Your booking request has been sent to nearby drivers.',
-          style: TextStyle(
-            color: SmartStageColors.greyDark,
-          ),
-        ),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.pop(context),
-            child: const Text(
-              'OK',
+    final fare = _calculateFare(distance);
+    final destinationName = place['name'] ?? 'Unknown';
+
+    try {
+      final bookingRef =
+      FirebaseFirestore.instance.collection('bookings').doc();
+
+      await bookingRef.set({
+        'bookingId': bookingRef.id,
+        'passengerUid': user.uid,
+        'pickUpAddress': 'Current Location',
+        'destinationAddress': destinationName,
+        'pickUph3': 'origin_h3',
+        'destinationH3': 'destination_h3',
+        'fareAmount': fare,
+        'passengerCount': 1,
+        'eventType': 'other',
+        'status': 'searching',
+        'paymentStatus': 'UNPAID',
+        'bookingTime': DateTime.now().toIso8601String(),
+        'created_at': FieldValue.serverTimestamp(),
+      });
+
+      if (mounted) {
+        showDialog(
+          context: context,
+          builder: (context) => AlertDialog(
+            backgroundColor: Colors.white,
+            shape: RoundedRectangleBorder(
+              borderRadius: BorderRadius.circular(20),
+            ),
+            title: const Text(
+              'BOOKING SENT!',
               style: TextStyle(
-                color: SmartStageColors.electricGreen,
                 fontWeight: FontWeight.bold,
+                color: SmartStageColors.primaryBlue,
               ),
             ),
+            content: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                const Text(
+                  'Your booking request has been sent to nearby drivers.',
+                ),
+                const SizedBox(height: 12),
+                Text(
+                  'Destination: $destinationName',
+                  style: const TextStyle(
+                    fontSize: 13,
+                    fontWeight: FontWeight.bold,
+                  ),
+                ),
+                const SizedBox(height: 4),
+                Text(
+                  'Estimated fare: UGX $fare',
+                  style: const TextStyle(
+                    fontSize: 13,
+                    fontWeight: FontWeight.bold,
+                    color: Color(0xFF10B981),
+                  ),
+                ),
+              ],
+            ),
+            actions: [
+              TextButton(
+                onPressed: () => Navigator.pop(context),
+                child: const Text(
+                  'OK',
+                  style: TextStyle(
+                    color: SmartStageColors.primaryBlue,
+                    fontWeight: FontWeight.bold,
+                  ),
+                ),
+              ),
+            ],
           ),
-        ],
-      ),
-    );
+        );
+      }
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('Booking failed: $e'),
+            backgroundColor: SmartStageColors.red,
+          ),
+        );
+      }
+    }
+  }
+
+  Future<void> _callDriver(String phone) async {
+    if (phone.isEmpty) return;
+
+    final url = Uri.parse('tel:$phone');
+
+    if (await canLaunchUrl(url)) {
+      await launchUrl(url);
+    }
+  }
+
+  Future<void> _messageDriver(String phone) async {
+    if (phone.isEmpty) return;
+
+    final url = Uri.parse('sms:$phone');
+
+    if (await canLaunchUrl(url)) {
+      await launchUrl(url);
+    }
   }
 
   @override
   Widget build(BuildContext context) {
-    final state = ref.watch(privateHireProvider);
-    final isDark = Theme.of(context).brightness == Brightness.dark;
-
     return Scaffold(
-      backgroundColor: isDark ? const Color(0xFF0A192F) : const Color(0xFFF8FAFC),
+      backgroundColor: const Color(0xFFF5F7FA),
       appBar: AppBar(
         title: const Text('PRIVATE HIRE'),
-        backgroundColor: isDark ? const Color(0xFF0A192F) : Colors.white,
-        foregroundColor: isDark ? Colors.white : const Color(0xFF1E293B),
+        backgroundColor: const Color(0xFF1E293B),
         elevation: 0,
-        actions: [
-          Stack(
-            children: [
-              IconButton(
-                icon: const Icon(Icons.inbox_outlined),
-                tooltip: 'Driver Requests',
-                onPressed: () {
-                  Navigator.push(
-                    context,
-                    MaterialPageRoute(
-                      builder: (context) => const DriverRequestsScreen(),
-                    ),
-                  ).then((_) => _loadBookingRequestCount());
-                },
+      ),
+      body: SingleChildScrollView(
+        padding: const EdgeInsets.all(12),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            // Search Bar
+            Container(
+              padding: const EdgeInsets.symmetric(horizontal: 16),
+              decoration: BoxDecoration(
+                color: Colors.white,
+                borderRadius: BorderRadius.circular(12),
               ),
-              if (_bookingRequestCount > 0)
-                Positioned(
-                  top: 8,
-                  right: 8,
-                  child: Container(
-                    padding: const EdgeInsets.all(4),
-                    decoration: BoxDecoration(
-                      color: Colors.red,
-                      shape: BoxShape.circle,
-                      border: Border.all(color: Colors.white, width: 2),
-                    ),
-                    child: Text(
-                      '$_bookingRequestCount',
-                      style: const TextStyle(
-                        fontSize: 8,
-                        fontWeight: FontWeight.bold,
-                        color: Colors.white,
-                      ),
-                    ),
+              child: TextField(
+                controller: _destinationController,
+                decoration: const InputDecoration(
+                  hintText: 'Where do you want to go?',
+                  border: InputBorder.none,
+                  prefixIcon: Icon(Icons.search),
+                ),
+                onSubmitted: _searchPlaces,
+              ),
+            ),
+            const SizedBox(height: 8),
+
+            // Error
+            if (_errorMessage != null)
+              Padding(
+                padding: const EdgeInsets.symmetric(vertical: 8),
+                child: Text(
+                  _errorMessage!,
+                  style: const TextStyle(
+                    color: SmartStageColors.red,
+                    fontSize: 13,
                   ),
                 ),
-            ],
-          ),
-        ],
-      ),
-      body: Container(
-        color: Colors.white,
-      //),
-        child: Column(
-          children: [
-            Container(
-              height: 50,
-              padding: const EdgeInsets.symmetric(horizontal: 16),
-              child: ListView(
-                scrollDirection: Axis.horizontal,
-                children: EventType.values.map((event) {
-                  final isSelected = _selectedEvent == event;
-                  return Padding(
-                    padding: const EdgeInsets.only(right: 8),
-                    child: GestureDetector(
-                      onTap: () {
-                        setState(() {
-                          _selectedEvent = event;
-                        });
-                      },
-                      child: Container(
-                        padding: const EdgeInsets.symmetric(horizontal: 16),
-                        decoration: BoxDecoration(
-                          color: isSelected
-                              ? const Color(0xFF2563EB)
-                              : isDark
-                              ? SmartStageColors.navyCard
-                              : Colors.white,
-                          borderRadius: BorderRadius.circular(30),
-                          border: Border.all(
-                            color: isSelected
-                                ? const Color(0xFF2563EB)
-                                : isDark
-                                ? Colors.white10
-                                : SmartStageColors.greyLight,
-                          ),
-                          boxShadow: isSelected
-                              ? [
-                            BoxShadow(
-                              color: const Color(0xFF2563EB).withOpacity(0.4),
-                              blurRadius: 12,
-                            ),
-                          ]
-                              : null,
-                        ),
-                        child: Center(
-                          child: Text(
-                            event.name.toUpperCase(),
-                            style: TextStyle(
-                              fontSize: 11,
-                              fontWeight: FontWeight.bold,
-                              color: isSelected
-                                  ? Colors.white
-                                  : isDark
-                                  ? SmartStageColors.greyMid
-                                  : SmartStageColors.greyDark,
-                            ),
-                          ),
-                        ),
-                      ),
-                    ),
-                  );
-                }).toList(),
               ),
-            ),
-            const SizedBox(height: 10),
-            Padding(
-              padding: const EdgeInsets.symmetric(horizontal: 16),
-              child: GlowButton(
-                text: 'CREATE BOOKING REQUEST',
-                color: SmartStageColors.primaryBlue,
-                glowColor: SmartStageColors.primaryBlue.withOpacity(0.4),
-                icon: Icons.add_circle_outline,
-                onPressed: _showCreateBookingSheet,
+
+            // Loading
+            if (_isSearching)
+              const Padding(
+                padding: EdgeInsets.all(20),
+                child: Center(
+                  child: CircularProgressIndicator(
+                    color: SmartStageColors.primaryBlue,
+                  ),
+                ),
               ),
-            ),
-            const SizedBox(height: 20),
-            Expanded(
-              child: state.isLoadingBookings
-                  ? const Center(
-                child: CircularProgressIndicator(
-                  color: Color(0xFF2563EB),
+
+            // Places Grid
+            if (_places.isNotEmpty)
+              GridView.builder(
+                shrinkWrap: true,
+                physics: const NeverScrollableScrollPhysics(),
+                gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
+                  crossAxisCount: 2,
+                  crossAxisSpacing: 10,
+                  mainAxisSpacing: 10,
+                  childAspectRatio: 0.72,
                 ),
-              )
-                  : state.myBookings.isEmpty
-                  ? Center(
-                child: Column(
-                  mainAxisAlignment: MainAxisAlignment.center,
-                  children: [
-                    Icon(
-                      Icons.event_note,
-                      size: 64,
-                      color: isDark
-                          ? SmartStageColors.greyDark
-                          : SmartStageColors.greyLight,
-                    ),
-                    const SizedBox(height: 16),
-                    Text(
-                      'No Bookings Yet',
-                      style: TextStyle(
-                        fontSize: 16,
-                        fontWeight: FontWeight.bold,
-                        color: isDark
-                            ? SmartStageColors.greyMid
-                            : SmartStageColors.greyDark,
-                      ),
-                    ),
-                    const SizedBox(height: 8),
-                    Text(
-                      'Create a request for your event',
-                      style: TextStyle(
-                        fontSize: 13,
-                        color: isDark
-                            ? SmartStageColors.greyMid
-                            : SmartStageColors.greyDark,
-                      ),
-                    ),
-                  ],
-                ),
-              )
-                  : ListView.builder(
-                padding: const EdgeInsets.all(16),
-                itemCount: state.myBookings.length,
+                itemCount: _places.length,
                 itemBuilder: (context, index) {
-                  final booking = state.myBookings[index];
-                  return _BookingCard(booking: booking);
+                  final place = _places[index];
+
+                  final distance = _calculateDistance(
+                    _originLat,
+                    _originLng,
+                    (place['lat'] as num).toDouble(),
+                    (place['lng'] as num).toDouble(),
+                  );
+
+                  final fare = _calculateFare(distance);
+
+                  return DestinationCard(
+                    name: place['name'] ?? 'Unknown',
+                    address: place['address'] ?? '',
+                    rating: (place['rating'] as num?)?.toDouble() ?? 0,
+                    imageUrl: place['photoUrl'] ?? '',
+                    fare: fare,
+                    onBook: () => _bookDestination(place),
+                  );
                 },
               ),
+
+            const SizedBox(height: 20),
+
+            // Nearby Drivers
+            const Text(
+              'NEARBY DRIVERS',
+              style: TextStyle(
+                fontSize: 12,
+                fontWeight: FontWeight.bold,
+                color: Colors.grey,
+                letterSpacing: 1,
+              ),
             ),
-          ],
-        ),
-      ),
-    );
-  }
-}
-
-class _BookingCard extends StatelessWidget {
-  final BookingModel booking;
-
-  const _BookingCard({Key? key, required this.booking}) : super(key: key);
-
-  @override
-  Widget build(BuildContext context) {
-    final isDark = Theme.of(context).brightness == Brightness.dark;
-
-    return Container(
-      margin: const EdgeInsets.only(bottom: 12),
-      padding: const EdgeInsets.all(16),
-      decoration: BoxDecoration(
-        color: isDark ? SmartStageColors.navyCard : Colors.white,
-        borderRadius: BorderRadius.circular(16),
-        border: Border.all(
-          color: isDark ? Colors.white10 : SmartStageColors.greyLight,
-        ),
-        boxShadow: [
-          BoxShadow(
-            color: Colors.black.withOpacity(0.05),
-            blurRadius: 10,
-            offset: const Offset(0, 4),
-          ),
-        ],
-      ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Row(
-            mainAxisAlignment: MainAxisAlignment.spaceBetween,
-            children: [
+            const SizedBox(height: 8),
+            if (_drivers.isEmpty)
               Container(
-                padding:
-                const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
+                padding: const EdgeInsets.all(24),
                 decoration: BoxDecoration(
-                  color: const Color(0xFF2563EB).withOpacity(0.1),
+                  color: Colors.white,
                   borderRadius: BorderRadius.circular(12),
                 ),
-                child: Text(
-                  booking.eventLabel.toUpperCase(),
-                  style: const TextStyle(
-                    fontSize: 10,
-                    fontWeight: FontWeight.bold,
-                    color: Color(0xFF2563EB),
-                    letterSpacing: 0.8,
+                child: const Center(
+                  child: Text(
+                    'No nearby drivers',
+                    style: TextStyle(color: Colors.grey),
                   ),
                 ),
-              ),
-              Text(
-                booking.statusLabel,
-                style: TextStyle(
-                  fontSize: 11,
-                  fontWeight: FontWeight.bold,
-                  color: isDark
-                      ? SmartStageColors.greyMid
-                      : SmartStageColors.greyDark,
-                ),
-              ),
-            ],
-          ),
-          const SizedBox(height: 12),
-          Row(
-            children: [
-              const Icon(
-                Icons.location_on_outlined,
-                size: 16,
-                color: Color(0xFF2563EB),
-              ),
-              const SizedBox(width: 6),
-              Expanded(
-                child: Text(
-                  booking.pickUpAddress,
-                  style: TextStyle(
-                    fontSize: 13,
-                    fontWeight: FontWeight.w600,
-                    color: isDark
-                        ? SmartStageColors.white
-                        : SmartStageColors.deepNavy,
-                  ),
-                ),
-              ),
-            ],
-          ),
-          const SizedBox(height: 6),
-          Row(
-            children: [
-              const Icon(
-                Icons.flag_outlined,
-                size: 16,
-                color: Color(0xFFFFB800),
-              ),
-              const SizedBox(width: 6),
-              Expanded(
-                child: Text(
-                  booking.destinationAddress,
-                  style: TextStyle(
-                    fontSize: 13,
-                    fontWeight: FontWeight.w600,
-                    color: isDark
-                        ? SmartStageColors.white
-                        : SmartStageColors.deepNavy,
-                  ),
-                ),
-              ),
-            ],
-          ),
-          const SizedBox(height: 12),
-          Row(
-            children: [
-              const Icon(
-                Icons.people_outline,
-                size: 14,
-                color: SmartStageColors.greyMid,
-              ),
-              const SizedBox(width: 4),
-              Text(
-                '${booking.passengerCount} Passengers',
-                style: TextStyle(
-                  fontSize: 11,
-                  color: isDark
-                      ? SmartStageColors.greyMid
-                      : SmartStageColors.greyDark,
-                ),
-              ),
-              const Spacer(),
-              if (booking.fareAmount > 0)
-                Text(
-                  'UGX ${booking.fareAmount.toStringAsFixed(0)}',
-                  style: const TextStyle(
-                    fontSize: 14,
-                    fontWeight: FontWeight.w900,
-                    color: Color(0xFFFFB800),
-                  ),
-                ),
-            ],
-          ),
-        ],
-      ),
-    );
-  }
-}
-
-class _CreateBookingSheet extends StatelessWidget {
-  final EventType selectedEvent;
-  final TextEditingController pickupController;
-  final TextEditingController destinationController;
-  final TextEditingController descriptionController;
-  final TextEditingController passengersController;
-  final VoidCallback onCreate;
-
-  const _CreateBookingSheet({
-    Key? key,
-    required this.selectedEvent,
-    required this.pickupController,
-    required this.destinationController,
-    required this.descriptionController,
-    required this.passengersController,
-    required this.onCreate,
-  }) : super(key: key);
-
-  @override
-  Widget build(BuildContext context) {
-    final isDark = Theme.of(context).brightness == Brightness.dark;
-
-    return Container(
-      decoration: BoxDecoration(
-        color: isDark ? SmartStageColors.navyCard : Colors.white,
-        borderRadius: const BorderRadius.only(
-          topLeft: Radius.circular(28),
-          topRight: Radius.circular(28),
-        ),
-      ),
-      child: Padding(
-        padding: EdgeInsets.only(
-          bottom: MediaQuery.of(context).viewInsets.bottom,
-        ),
-        child: SingleChildScrollView(
-          padding: const EdgeInsets.all(24),
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Center(
-                child: Container(
-                  width: 36,
-                  height: 4,
-                  decoration: BoxDecoration(
-                    color: isDark
-                        ? SmartStageColors.greyDark
-                        : SmartStageColors.greyLight,
-                    borderRadius: BorderRadius.circular(2),
-                  ),
-                ),
-              ),
-              const SizedBox(height: 20),
-              Text(
-                'CREATE BOOKING',
-                style: TextStyle(
-                  fontSize: 18,
-                  fontWeight: FontWeight.bold,
-                  color: isDark
-                      ? SmartStageColors.white
-                      : SmartStageColors.deepNavy,
-                ),
-              ),
-              const SizedBox(height: 8),
-              Text(
-                'Event: ${selectedEvent.name.toUpperCase()}',
-                style: const TextStyle(
-                  fontSize: 13,
-                  fontWeight: FontWeight.bold,
-                  color: Color(0xFF2563EB),
-                ),
-              ),
-              const SizedBox(height: 20),
-              TextField(
-                controller: pickupController,
-                decoration: const InputDecoration(
-                  labelText: 'Pickup Address',
-                  prefixIcon: Icon(Icons.location_on_outlined),
-                ),
-              ),
-              const SizedBox(height: 12),
-              TextField(
-                controller: destinationController,
-                decoration: const InputDecoration(
-                  labelText: 'Destination Address',
-                  prefixIcon: Icon(Icons.flag_outlined),
-                ),
-              ),
-              const SizedBox(height: 12),
-              TextField(
-                controller: passengersController,
-                keyboardType: TextInputType.number,
-                decoration: const InputDecoration(
-                  labelText: 'Number of Passengers',
-                  prefixIcon: Icon(Icons.people_outline),
-                ),
-              ),
-              const SizedBox(height: 12),
-              TextField(
-                controller: descriptionController,
-                maxLines: 3,
-                decoration: const InputDecoration(
-                  labelText: 'Event Description (optional)',
-                  prefixIcon: Icon(Icons.description_outlined),
-                ),
-              ),
-              const SizedBox(height: 24),
-              GlowButton(
-                text: 'SUBMIT REQUEST',
-                color: const Color(0xFFFFB800),
-                glowColor: const Color(0xFFFFB800).withOpacity(0.4),
-                icon: Icons.send_outlined,
-                onPressed: () {
-                  Navigator.pop(context);
-                  onCreate();
-                },
-              ),
-            ],
-          ),
+              )
+            else
+              ..._drivers.map((driver) {
+                return NearbyDriverCard(
+                  plate: driver['plate'],
+                  driverName: driver['name'],
+                  phone: driver['phone'],
+                  destination: driver['destination'],
+                  onMessage: () => _messageDriver(driver['phone']),
+                  onCall: () => _callDriver(driver['phone']),
+                );
+              }).toList(),
+          ],
         ),
       ),
     );
