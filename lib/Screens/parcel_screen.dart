@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import '../Config/theme.dart';
+import '../Config/app_config.dart';
 import '../Providers/parcel_provider.dart';
 import '../models/parcel_model.dart';
 import '../Widgets/parcel_service_card.dart';
@@ -70,9 +70,9 @@ class _ParcelScreenState extends ConsumerState<ParcelScreen> {
               _pickupController.text.trim().isEmpty ||
               _destinationController.text.trim().isEmpty) {
             ScaffoldMessenger.of(context).showSnackBar(
-              const SnackBar(
-                content: Text('Please fill all required fields'),
-                backgroundColor: SmartStageColors.red,
+              SnackBar(
+                content: Text('Please fill all required fields', style: AppText.body.copyWith(color: Colors.white)),
+                backgroundColor: const Color(0xFFEF4444),
               ),
             );
             return;
@@ -106,47 +106,40 @@ class _ParcelScreenState extends ConsumerState<ParcelScreen> {
         shape: RoundedRectangleBorder(
           borderRadius: BorderRadius.circular(20),
         ),
-        title: const Text(
-          'PARCEL CREATED!',
-          style: TextStyle(
-            fontWeight: FontWeight.bold,
-            color: SmartStageColors.primaryBlue,
-          ),
+        title: Text(
+          'PARCEL CREATED',
+          style: AppText.header.copyWith(fontSize: 16, color: const Color(0xFF2563EB)),
         ),
         content: Column(
           mainAxisSize: MainAxisSize.min,
           children: [
-            const Text('Your parcel has been created.'),
+            Text('Your parcel has been created.', style: AppText.body),
             const SizedBox(height: 12),
             Container(
               padding: const EdgeInsets.all(12),
               decoration: BoxDecoration(
-                color: SmartStageColors.primaryBlue.withOpacity(0.1),
+                color: const Color(0xFF2563EB).withOpacity(0.1),
                 borderRadius: BorderRadius.circular(12),
               ),
               child: Text(
                 trackingCode,
-                style: const TextStyle(
-                  fontSize: 14,
-                  fontWeight: FontWeight.bold,
-                  color: SmartStageColors.primaryBlue,
-                ),
+                style: AppText.number.copyWith(fontSize: 14, color: const Color(0xFF2563EB)),
               ),
             ),
             const SizedBox(height: 8),
-            const Text(
+            Text(
               'Share this code with the receiver',
-              style: TextStyle(fontSize: 12, color: Colors.grey),
+              style: AppText.caption,
             ),
           ],
         ),
         actions: [
           TextButton(
             onPressed: () => Navigator.pop(context),
-            child: const Text(
+            child: Text(
               'OK',
-              style: TextStyle(
-                color: SmartStageColors.primaryBlue,
+              style: AppText.body.copyWith(
+                color: const Color(0xFF2563EB),
                 fontWeight: FontWeight.bold,
               ),
             ),
@@ -169,12 +162,15 @@ class _ParcelScreenState extends ConsumerState<ParcelScreen> {
     return Scaffold(
       backgroundColor: const Color(0xFFF5F7FA),
       appBar: AppBar(
-        title: const Text('PARCEL SERVICES'),
+        title: Text(
+          'PARCEL SERVICES',
+          style: AppText.header.copyWith(fontSize: 16, color: Colors.white),
+        ),
         backgroundColor: const Color(0xFF1E293B),
         elevation: 0,
       ),
       body: SingleChildScrollView(
-        padding: const EdgeInsets.all(12),
+        padding: const EdgeInsets.all(16),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
@@ -183,21 +179,31 @@ class _ParcelScreenState extends ConsumerState<ParcelScreen> {
               padding: const EdgeInsets.symmetric(horizontal: 16),
               decoration: BoxDecoration(
                 color: Colors.white,
-                borderRadius: BorderRadius.circular(12),
+                borderRadius: BorderRadius.circular(16),
+                boxShadow: [
+                  BoxShadow(
+                    color: Colors.black.withOpacity(0.04),
+                    blurRadius: 12,
+                    offset: const Offset(0, 4),
+                  ),
+                ],
               ),
               child: Row(
                 children: [
                   const Icon(
                     Icons.search,
-                    color: SmartStageColors.primaryBlue,
+                    color: Color(0xFF2563EB),
                   ),
                   const SizedBox(width: 8),
                   Expanded(
                     child: TextField(
                       controller: _trackingController,
-                      decoration: const InputDecoration(
+                      style: AppText.body,
+                      decoration: InputDecoration(
                         hintText: 'Enter tracking code',
+                        hintStyle: AppText.caption,
                         border: InputBorder.none,
+                        contentPadding: const EdgeInsets.symmetric(vertical: 16),
                       ),
                       onSubmitted: (_) => _searchTracking(),
                     ),
@@ -205,14 +211,14 @@ class _ParcelScreenState extends ConsumerState<ParcelScreen> {
                   IconButton(
                     icon: const Icon(
                       Icons.arrow_forward,
-                      color: SmartStageColors.primaryBlue,
+                      color: Color(0xFF2563EB),
                     ),
                     onPressed: _searchTracking,
                   ),
                 ],
               ),
             ),
-            const SizedBox(height: 12),
+            const SizedBox(height: 16),
 
             // Services Row
             SingleChildScrollView(
@@ -225,14 +231,14 @@ class _ParcelScreenState extends ConsumerState<ParcelScreen> {
                     color: const Color(0xFF2563EB),
                     onTap: _searchTracking,
                   ),
-                  const SizedBox(width: 8),
+                  const SizedBox(width: 10),
                   ParcelServiceCard(
                     title: 'Place Order',
                     icon: Icons.add_box_outlined,
                     color: const Color(0xFF10B981),
                     onTap: _showCreateParcelSheet,
                   ),
-                  const SizedBox(width: 8),
+                  const SizedBox(width: 10),
                   ParcelServiceCard(
                     title: 'Live Tracking',
                     icon: Icons.map_outlined,
@@ -253,44 +259,28 @@ class _ParcelScreenState extends ConsumerState<ParcelScreen> {
                 ],
               ),
             ),
-            const SizedBox(height: 20),
+            const SizedBox(height: 24),
 
             // Current Tracking
-            const Text(
-              'CURRENT TRACKING',
-              style: TextStyle(
-                fontSize: 12,
-                fontWeight: FontWeight.bold,
-                color: Colors.grey,
-                letterSpacing: 1,
-              ),
-            ),
-            const SizedBox(height: 8),
+            Text('CURRENT TRACKING', style: AppText.caption.copyWith(letterSpacing: 1.5)),
+            const SizedBox(height: 10),
             CurrentTrackingCard(parcel: activeParcel),
-            const SizedBox(height: 20),
+            const SizedBox(height: 24),
 
             // Recent Orders
-            const Text(
-              'RECENT ORDERS',
-              style: TextStyle(
-                fontSize: 12,
-                fontWeight: FontWeight.bold,
-                color: Colors.grey,
-                letterSpacing: 1,
-              ),
-            ),
-            const SizedBox(height: 8),
+            Text('RECENT ORDERS', style: AppText.caption.copyWith(letterSpacing: 1.5)),
+            const SizedBox(height: 10),
             if (state.myParcels.isEmpty)
               Container(
                 padding: const EdgeInsets.all(24),
                 decoration: BoxDecoration(
                   color: Colors.white,
-                  borderRadius: BorderRadius.circular(12),
+                  borderRadius: BorderRadius.circular(16),
                 ),
-                child: const Center(
+                child: Center(
                   child: Text(
                     'No recent orders',
-                    style: TextStyle(color: Colors.grey),
+                    style: AppText.caption,
                   ),
                 ),
               )
@@ -331,8 +321,8 @@ class _CreateParcelSheet extends StatelessWidget {
       decoration: const BoxDecoration(
         color: Colors.white,
         borderRadius: BorderRadius.only(
-          topLeft: Radius.circular(28),
-          topRight: Radius.circular(28),
+          topLeft: Radius.circular(24),
+          topRight: Radius.circular(24),
         ),
       ),
       child: Padding(
@@ -350,76 +340,124 @@ class _CreateParcelSheet extends StatelessWidget {
                   width: 36,
                   height: 4,
                   decoration: BoxDecoration(
-                    color: SmartStageColors.greyLight,
+                    color: const Color(0xFFE2E8F0),
                     borderRadius: BorderRadius.circular(2),
                   ),
                 ),
               ),
               const SizedBox(height: 20),
-              const Text(
+              Text(
                 'SEND PARCEL',
-                style: TextStyle(
-                  fontSize: 18,
-                  fontWeight: FontWeight.bold,
-                  color: Color(0xFF1E293B),
-                ),
+                style: AppText.header.copyWith(fontSize: 16),
               ),
               const SizedBox(height: 20),
               TextField(
                 controller: senderNameController,
-                decoration: const InputDecoration(
+                style: AppText.body,
+                decoration: InputDecoration(
                   labelText: 'Sender Name',
-                  prefixIcon: Icon(Icons.person_outline),
+                  labelStyle: AppText.caption,
+                  prefixIcon: const Icon(Icons.person_outline, color: Color(0xFF2563EB)),
+                  border: OutlineInputBorder(
+                    borderRadius: BorderRadius.circular(12),
+                    borderSide: BorderSide(color: Colors.grey.shade300),
+                  ),
                 ),
               ),
               const SizedBox(height: 12),
               TextField(
                 controller: receiverNameController,
-                decoration: const InputDecoration(
+                style: AppText.body,
+                decoration: InputDecoration(
                   labelText: 'Receiver Name',
-                  prefixIcon: Icon(Icons.person_outline),
+                  labelStyle: AppText.caption,
+                  prefixIcon: const Icon(Icons.person_outline, color: Color(0xFF2563EB)),
+                  border: OutlineInputBorder(
+                    borderRadius: BorderRadius.circular(12),
+                    borderSide: BorderSide(color: Colors.grey.shade300),
+                  ),
                 ),
               ),
               const SizedBox(height: 12),
               TextField(
                 controller: receiverPhoneController,
+                style: AppText.body,
                 keyboardType: TextInputType.phone,
-                decoration: const InputDecoration(
+                decoration: InputDecoration(
                   labelText: 'Receiver Phone',
-                  prefixIcon: Icon(Icons.phone_outlined),
+                  labelStyle: AppText.caption,
+                  prefixIcon: const Icon(Icons.phone_outlined, color: Color(0xFF2563EB)),
+                  border: OutlineInputBorder(
+                    borderRadius: BorderRadius.circular(12),
+                    borderSide: BorderSide(color: Colors.grey.shade300),
+                  ),
                 ),
               ),
               const SizedBox(height: 12),
               TextField(
                 controller: pickupController,
-                decoration: const InputDecoration(
+                style: AppText.body,
+                decoration: InputDecoration(
                   labelText: 'Pickup Stage',
-                  prefixIcon: Icon(Icons.location_on_outlined),
+                  labelStyle: AppText.caption,
+                  prefixIcon: const Icon(Icons.location_on_outlined, color: Color(0xFF2563EB)),
+                  border: OutlineInputBorder(
+                    borderRadius: BorderRadius.circular(12),
+                    borderSide: BorderSide(color: Colors.grey.shade300),
+                  ),
                 ),
               ),
               const SizedBox(height: 12),
               TextField(
                 controller: destinationController,
-                decoration: const InputDecoration(
+                style: AppText.body,
+                decoration: InputDecoration(
                   labelText: 'Destination Stage',
-                  prefixIcon: Icon(Icons.flag_outlined),
+                  labelStyle: AppText.caption,
+                  prefixIcon: const Icon(Icons.flag_outlined, color: Color(0xFF2563EB)),
+                  border: OutlineInputBorder(
+                    borderRadius: BorderRadius.circular(12),
+                    borderSide: BorderSide(color: Colors.grey.shade300),
+                  ),
                 ),
               ),
               const SizedBox(height: 12),
               TextField(
                 controller: fareController,
+                style: AppText.body,
                 keyboardType: TextInputType.number,
-                decoration: const InputDecoration(
+                decoration: InputDecoration(
                   labelText: 'Fare (UGX)',
-                  prefixIcon: Icon(Icons.payments_outlined),
+                  labelStyle: AppText.caption,
+                  prefixIcon: const Icon(Icons.payments_outlined, color: Color(0xFF2563EB)),
+                  border: OutlineInputBorder(
+                    borderRadius: BorderRadius.circular(12),
+                    borderSide: BorderSide(color: Colors.grey.shade300),
+                  ),
                 ),
               ),
               const SizedBox(height: 24),
-              GlowButton(
-                text: 'CREATE PARCEL',
-                color: SmartStageColors.primaryBlue,
-                glowColor: SmartStageColors.primaryBlue.withOpacity(0.4),
-                onPressed: onCreate,
+              SizedBox(
+                width: double.infinity,
+                child: ElevatedButton(
+                  onPressed: onCreate,
+                  style: ElevatedButton.styleFrom(
+                    backgroundColor: const Color(0xFF2563EB),
+                    foregroundColor: Colors.white,
+                    padding: const EdgeInsets.symmetric(vertical: 16),
+                    shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(12),
+                    ),
+                  ),
+                  child: Text(
+                    'CREATE PARCEL',
+                    style: AppText.body.copyWith(
+                      color: Colors.white,
+                      fontWeight: FontWeight.bold,
+                      letterSpacing: 1,
+                    ),
+                  ),
+                ),
               ),
             ],
           ),

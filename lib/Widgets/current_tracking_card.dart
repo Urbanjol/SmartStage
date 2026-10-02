@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import '../Config/app_config.dart';
 import '../models/parcel_model.dart';
 
 class CurrentTrackingCard extends StatelessWidget {
@@ -14,6 +15,13 @@ class CurrentTrackingCard extends StatelessWidget {
         decoration: BoxDecoration(
           color: Colors.white,
           borderRadius: BorderRadius.circular(16),
+          boxShadow: [
+            BoxShadow(
+              color: Colors.black.withOpacity(0.04),
+              blurRadius: 12,
+              offset: const Offset(0, 4),
+            ),
+          ],
         ),
         child: Column(
           children: [
@@ -23,18 +31,18 @@ class CurrentTrackingCard extends StatelessWidget {
               color: Colors.grey.shade300,
             ),
             const SizedBox(height: 12),
-            const Text(
+            Text(
               'No active parcel',
-              style: TextStyle(
+              style: AppText.body.copyWith(
                 fontSize: 14,
                 fontWeight: FontWeight.w600,
                 color: Colors.grey,
               ),
             ),
             const SizedBox(height: 4),
-            const Text(
+            Text(
               'Your current shipment will appear here',
-              style: TextStyle(fontSize: 12, color: Colors.grey),
+              style: AppText.caption,
             ),
           ],
         ),
@@ -42,7 +50,7 @@ class CurrentTrackingCard extends StatelessWidget {
     }
 
     return Container(
-      padding: const EdgeInsets.all(16),
+      padding: const EdgeInsets.all(20),
       decoration: BoxDecoration(
         gradient: const LinearGradient(
           colors: [Color(0xFF2563EB), Color(0xFF1D4ED8)],
@@ -67,9 +75,8 @@ class CurrentTrackingCard extends StatelessWidget {
               const SizedBox(width: 8),
               Text(
                 parcel!.trackingCode,
-                style: const TextStyle(
+                style: AppText.number.copyWith(
                   fontSize: 14,
-                  fontWeight: FontWeight.bold,
                   color: Colors.white,
                 ),
               ),
@@ -84,7 +91,7 @@ class CurrentTrackingCard extends StatelessWidget {
               Expanded(
                 child: Text(
                   parcel!.pickupStage,
-                  style: const TextStyle(fontSize: 13, color: Colors.white),
+                  style: AppText.body.copyWith(color: Colors.white),
                 ),
               ),
             ],
@@ -98,12 +105,12 @@ class CurrentTrackingCard extends StatelessWidget {
               Expanded(
                 child: Text(
                   parcel!.destinationStage,
-                  style: const TextStyle(fontSize: 13, color: Colors.white),
+                  style: AppText.body.copyWith(color: Colors.white),
                 ),
               ),
             ],
           ),
-          const SizedBox(height: 16),
+          const SizedBox(height: 20),
           _buildTimeline(parcel!.status),
         ],
       ),
@@ -139,7 +146,7 @@ class CurrentTrackingCard extends StatelessWidget {
                 ),
                 if (index < stages.length - 1)
                   Container(
-                    width: 20,
+                    width: 24,
                     height: 2,
                     color: isDone ? Colors.white : Colors.white30,
                   ),
@@ -147,13 +154,13 @@ class CurrentTrackingCard extends StatelessWidget {
             );
           }),
         ),
-        const SizedBox(height: 8),
+        const SizedBox(height: 10),
         Text(
           status.name.replaceAll('_', ' ').toUpperCase(),
-          style: const TextStyle(
-            fontSize: 11,
-            fontWeight: FontWeight.bold,
+          style: AppText.caption.copyWith(
             color: Colors.white,
+            fontWeight: FontWeight.bold,
+            letterSpacing: 1,
           ),
         ),
       ],

@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import '../Config/app_config.dart';
 import '../models/parcel_model.dart';
 
 class RecentOrderCard extends StatelessWidget {
@@ -9,21 +10,27 @@ class RecentOrderCard extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Container(
-      margin: const EdgeInsets.only(bottom: 8),
+      margin: const EdgeInsets.only(bottom: 10),
       padding: const EdgeInsets.all(14),
       decoration: BoxDecoration(
         color: Colors.white,
-        borderRadius: BorderRadius.circular(12),
-        border: Border.all(color: Colors.grey.shade200),
+        borderRadius: BorderRadius.circular(16),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withOpacity(0.04),
+            blurRadius: 12,
+            offset: const Offset(0, 4),
+          ),
+        ],
       ),
       child: Row(
         children: [
           Container(
-            width: 40,
-            height: 40,
+            width: 44,
+            height: 44,
             decoration: BoxDecoration(
               color: const Color(0xFF2563EB).withOpacity(0.1),
-              borderRadius: BorderRadius.circular(10),
+              borderRadius: BorderRadius.circular(12),
             ),
             child: const Icon(
               Icons.inventory_2_outlined,
@@ -38,25 +45,20 @@ class RecentOrderCard extends StatelessWidget {
               children: [
                 Text(
                   parcel.trackingCode,
-                  style: const TextStyle(
-                    fontSize: 12,
-                    fontWeight: FontWeight.bold,
-                    color: Color(0xFF1E293B),
-                  ),
+                  style: AppText.number.copyWith(fontSize: 12),
                 ),
                 const SizedBox(height: 4),
                 Text(
                   '${parcel.pickupStage} → ${parcel.destinationStage}',
-                  style: const TextStyle(
-                    fontSize: 12,
-                    color: Colors.grey,
-                  ),
+                  style: AppText.caption,
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
                 ),
               ],
             ),
           ),
           Container(
-            padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+            padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
             decoration: BoxDecoration(
               color: parcel.status == ParcelStatus.delivered
                   ? const Color(0xFF10B981).withOpacity(0.1)
@@ -65,8 +67,7 @@ class RecentOrderCard extends StatelessWidget {
             ),
             child: Text(
               parcel.statusLabel,
-              style: TextStyle(
-                fontSize: 10,
+              style: AppText.caption.copyWith(
                 fontWeight: FontWeight.bold,
                 color: parcel.status == ParcelStatus.delivered
                     ? const Color(0xFF10B981)

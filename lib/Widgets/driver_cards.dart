@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import '../Config/app_config.dart';
 
 class BalanceChangeCard extends StatelessWidget {
   final double balance;
@@ -22,7 +23,14 @@ class BalanceChangeCard extends StatelessWidget {
       padding: const EdgeInsets.all(16),
       decoration: BoxDecoration(
         color: Colors.white,
-        borderRadius: BorderRadius.circular(12),
+        borderRadius: BorderRadius.circular(16),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withOpacity(0.04),
+            blurRadius: 12,
+            offset: const Offset(0, 4),
+          ),
+        ],
       ),
       child: Row(
         children: [
@@ -31,20 +39,14 @@ class BalanceChangeCard extends StatelessWidget {
             child: Row(
               children: [
                 Text(
-                  isVisible
-                      ? 'UGX ${balance.toStringAsFixed(0)}'
-                      : '••••••',
-                  style: const TextStyle(
-                    fontSize: 18,
-                    fontWeight: FontWeight.bold,
-                    color: Color(0xFF1E293B),
-                  ),
+                  isVisible ? 'UGX ${balance.toStringAsFixed(0)}' : '••••••',
+                  style: AppText.number.copyWith(fontSize: 20),
                 ),
                 const SizedBox(width: 8),
                 Icon(
                   isVisible ? Icons.visibility : Icons.visibility_off,
-                  size: 18,
-                  color: Colors.grey,
+                  size: 16,
+                  color: const Color(0xFF94A3B8),
                 ),
               ],
             ),
@@ -52,9 +54,12 @@ class BalanceChangeCard extends StatelessWidget {
           const Spacer(),
           Text(
             '${change.toStringAsFixed(1)}% today',
-            style: TextStyle(
-              color: isPositive ? const Color(0xFF10B981) : const Color(0xFFEF4444),
-              fontWeight: FontWeight.bold,
+            style: AppText.body.copyWith(
+              fontSize: 13,
+              fontWeight: FontWeight.w700,
+              color: isPositive
+                  ? const Color(0xFF10B981)
+                  : const Color(0xFFEF4444),
             ),
           ),
         ],
@@ -84,28 +89,42 @@ class LiveStatCard extends StatelessWidget {
         padding: const EdgeInsets.all(14),
         decoration: BoxDecoration(
           color: Colors.white,
-          borderRadius: BorderRadius.circular(12),
+          borderRadius: BorderRadius.circular(16),
+          boxShadow: [
+            BoxShadow(
+              color: Colors.black.withOpacity(0.04),
+              blurRadius: 12,
+              offset: const Offset(0, 4),
+            ),
+          ],
         ),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            Text(label, style: const TextStyle(fontSize: 11, color: Colors.grey)),
+            Text(label, style: AppText.caption),
+            const SizedBox(height: 6),
+            Text(value, style: AppText.number.copyWith(fontSize: 18)),
             const SizedBox(height: 4),
-            Text(
-              value,
-              style: const TextStyle(
-                fontSize: 18,
-                fontWeight: FontWeight.bold,
-                color: Color(0xFF1E293B),
-              ),
-            ),
-            const SizedBox(height: 4),
-            Text(
-              change,
-              style: TextStyle(
-                fontSize: 11,
-                color: isPositive ? const Color(0xFF10B981) : const Color(0xFFEF4444),
-              ),
+            Row(
+              children: [
+                Icon(
+                  isPositive ? Icons.arrow_upward : Icons.arrow_downward,
+                  size: 10,
+                  color: isPositive
+                      ? const Color(0xFF10B981)
+                      : const Color(0xFFEF4444),
+                ),
+                const SizedBox(width: 2),
+                Text(
+                  change,
+                  style: AppText.body.copyWith(
+                    fontSize: 11,
+                    color: isPositive
+                        ? const Color(0xFF10B981)
+                        : const Color(0xFFEF4444),
+                  ),
+                ),
+              ],
             ),
           ],
         ),
@@ -113,7 +132,67 @@ class LiveStatCard extends StatelessWidget {
     );
   }
 }
-//activeroutes card
+
+class ActiveRouteCard extends StatelessWidget {
+  final String routeText;
+  final VoidCallback onEndRoute;
+
+  const ActiveRouteCard({
+    Key? key,
+    required this.routeText,
+    required this.onEndRoute,
+  }) : super(key: key);
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      padding: const EdgeInsets.all(16),
+      decoration: BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(16),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withOpacity(0.04),
+            blurRadius: 12,
+            offset: const Offset(0, 4),
+          ),
+        ],
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Text('ACTIVE ROUTE', style: AppText.caption),
+          const SizedBox(height: 8),
+          Text(routeText, style: AppText.title),
+          const SizedBox(height: 12),
+          SizedBox(
+            width: double.infinity,
+            child: ElevatedButton(
+              onPressed: onEndRoute,
+              style: ElevatedButton.styleFrom(
+                backgroundColor: const Color(0xFFEF4444),
+                foregroundColor: Colors.white,
+                shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(10),
+                ),
+                padding: const EdgeInsets.symmetric(vertical: 12),
+              ),
+              child: Text(
+                'END ROUTE',
+                style: AppText.body.copyWith(
+                  color: Colors.white,
+                  fontWeight: FontWeight.bold,
+                  letterSpacing: 1,
+                ),
+              ),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
 class ActiveRouteTrafficCard extends StatelessWidget {
   final String condition;
   final int delayMinutes;
@@ -148,20 +227,24 @@ class ActiveRouteTrafficCard extends StatelessWidget {
       padding: const EdgeInsets.all(16),
       decoration: BoxDecoration(
         color: Colors.white,
-        borderRadius: BorderRadius.circular(12),
+        borderRadius: BorderRadius.circular(16),
         border: Border.all(color: color.withOpacity(0.3)),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withOpacity(0.04),
+            blurRadius: 12,
+            offset: const Offset(0, 4),
+          ),
+        ],
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           Row(
             children: [
-              const Icon(Icons.traffic, color: Color(0xFF1E293B)),
+              const Icon(Icons.traffic, color: Color(0xFF1E293B), size: 18),
               const SizedBox(width: 8),
-              const Text(
-                'YOUR ROUTE TRAFFIC',
-                style: TextStyle(fontSize: 11, color: Colors.grey),
-              ),
+              Text('YOUR ROUTE TRAFFIC', style: AppText.caption),
             ],
           ),
           const SizedBox(height: 12),
@@ -184,35 +267,23 @@ class ActiveRouteTrafficCard extends StatelessWidget {
               const SizedBox(width: 8),
               Text(
                 condition,
-                style: TextStyle(
-                  fontSize: 18,
-                  fontWeight: FontWeight.bold,
-                  color: color,
-                ),
+                style: AppText.number.copyWith(fontSize: 18, color: color),
               ),
               const Spacer(),
               Text(
                 '+$delayMinutes min',
-                style: TextStyle(
-                  fontSize: 14,
-                  fontWeight: FontWeight.bold,
-                  color: color,
-                ),
+                style: AppText.number.copyWith(fontSize: 14, color: color),
               ),
             ],
           ),
           const SizedBox(height: 8),
-          Text(
-            summary,
-            style: const TextStyle(fontSize: 12, color: Color(0xFF64748B)),
-          ),
+          Text(summary, style: AppText.body.copyWith(color: const Color(0xFF64748B))),
         ],
       ),
     );
   }
 }
-//end
-//new card for combined cards
+
 class DemandFuelRow extends StatelessWidget {
   final String busyHours;
   final String hotStages;
@@ -270,28 +341,70 @@ class RequestActionCard extends StatelessWidget {
           padding: const EdgeInsets.all(16),
           decoration: BoxDecoration(
             color: Colors.white,
-            borderRadius: BorderRadius.circular(12),
+            borderRadius: BorderRadius.circular(16),
             border: Border.all(color: color.withOpacity(0.3)),
+            boxShadow: [
+              BoxShadow(
+                color: Colors.black.withOpacity(0.04),
+                blurRadius: 12,
+                offset: const Offset(0, 4),
+              ),
+            ],
           ),
           child: Column(
             children: [
               Icon(icon, color: color, size: 28),
               const SizedBox(height: 8),
-              Text(
-                title,
-                style: const TextStyle(
-                  fontSize: 12,
-                  fontWeight: FontWeight.bold,
-                  color: Color(0xFF1E293B),
-                ),
-              ),
+              Text(title, style: AppText.body.copyWith(fontWeight: FontWeight.bold)),
               const SizedBox(height: 4),
               Text(
                 '$count',
-                style: TextStyle(
-                  fontSize: 20,
-                  fontWeight: FontWeight.bold,
+                style: AppText.number.copyWith(fontSize: 22, color: color),
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+class QuickActionButton extends StatelessWidget {
+  final String text;
+  final IconData icon;
+  final Color color;
+  final VoidCallback onTap;
+
+  const QuickActionButton({
+    Key? key,
+    required this.text,
+    required this.icon,
+    required this.color,
+    required this.onTap,
+  }) : super(key: key);
+
+  @override
+  Widget build(BuildContext context) {
+    return Expanded(
+      child: GestureDetector(
+        onTap: onTap,
+        child: Container(
+          padding: const EdgeInsets.symmetric(vertical: 14),
+          decoration: BoxDecoration(
+            color: color.withOpacity(0.08),
+            borderRadius: BorderRadius.circular(12),
+            border: Border.all(color: color.withOpacity(0.25)),
+          ),
+          child: Column(
+            children: [
+              Icon(icon, color: color, size: 22),
+              const SizedBox(height: 6),
+              Text(
+                text,
+                style: AppText.caption.copyWith(
                   color: color,
+                  fontWeight: FontWeight.bold,
+                  letterSpacing: 0.5,
                 ),
               ),
             ],
@@ -301,8 +414,90 @@ class RequestActionCard extends StatelessWidget {
     );
   }
 }
-//end of it
-//traffic cards
+
+class DemandPulseCard extends StatelessWidget {
+  final String busyHours;
+  final String hotStages;
+
+  const DemandPulseCard({
+    Key? key,
+    required this.busyHours,
+    required this.hotStages,
+  }) : super(key: key);
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      padding: const EdgeInsets.all(14),
+      decoration: BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(16),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withOpacity(0.04),
+            blurRadius: 12,
+            offset: const Offset(0, 4),
+          ),
+        ],
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Text('DEMAND PULSE', style: AppText.caption),
+          const SizedBox(height: 8),
+          Text('Busy: $busyHours', style: AppText.body.copyWith(fontSize: 12)),
+          const SizedBox(height: 4),
+          Text('Hot: $hotStages', style: AppText.body.copyWith(fontSize: 12)),
+        ],
+      ),
+    );
+  }
+}
+
+class FuelPricesCard extends StatelessWidget {
+  final List<dynamic> prices;
+
+  const FuelPricesCard({Key? key, required this.prices}) : super(key: key);
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      padding: const EdgeInsets.all(14),
+      decoration: BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(16),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withOpacity(0.04),
+            blurRadius: 12,
+            offset: const Offset(0, 4),
+          ),
+        ],
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Text('FUEL PRICES', style: AppText.caption),
+          const SizedBox(height: 8),
+          if (prices.isEmpty)
+            Text('No data', style: AppText.body)
+          else
+            ...prices.take(3).map((price) {
+              final map = price as Map<String, dynamic>;
+              return Padding(
+                padding: const EdgeInsets.symmetric(vertical: 3),
+                child: Text(
+                  '⛽ ${map['company']}  P ${map['petrol']}',
+                  style: AppText.body.copyWith(fontSize: 11),
+                ),
+              );
+            }).toList(),
+        ],
+      ),
+    );
+  }
+}
+
 class TrafficCard extends StatelessWidget {
   final List<dynamic> traffic;
 
@@ -310,20 +505,25 @@ class TrafficCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    if (traffic.isEmpty) {
-      return const SizedBox.shrink();
-    }
+    if (traffic.isEmpty) return const SizedBox.shrink();
 
     return Container(
       padding: const EdgeInsets.all(16),
       decoration: BoxDecoration(
         color: Colors.white,
-        borderRadius: BorderRadius.circular(12),
+        borderRadius: BorderRadius.circular(16),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withOpacity(0.04),
+            blurRadius: 12,
+            offset: const Offset(0, 4),
+          ),
+        ],
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          const Text('TRAFFIC', style: TextStyle(fontSize: 11, color: Colors.grey)),
+          Text('TRAFFIC', style: AppText.caption),
           const SizedBox(height: 8),
           ...traffic.map((item) {
             final map = item as Map<String, dynamic>;
@@ -352,10 +552,12 @@ class TrafficCard extends StatelessWidget {
                     ),
                   ),
                   const SizedBox(width: 8),
-                  Expanded(child: Text(road, style: const TextStyle(fontSize: 13))),
+                  Expanded(
+                    child: Text(road, style: AppText.body.copyWith(fontSize: 13)),
+                  ),
                   Text(
                     condition,
-                    style: TextStyle(
+                    style: AppText.body.copyWith(
                       fontSize: 13,
                       fontWeight: FontWeight.bold,
                       color: color,
@@ -365,207 +567,6 @@ class TrafficCard extends StatelessWidget {
               ),
             );
           }).toList(),
-        ],
-      ),
-    );
-  }
-}
-//end
-
-class ActiveRouteCard extends StatelessWidget {
-  final String routeText;
-  final VoidCallback onEndRoute;
-
-  const ActiveRouteCard({
-    Key? key,
-    required this.routeText,
-    required this.onEndRoute,
-  }) : super(key: key);
-
-  @override
-  Widget build(BuildContext context) {
-    return Container(
-      padding: const EdgeInsets.all(16),
-      decoration: BoxDecoration(
-        color: Colors.white,
-        borderRadius: BorderRadius.circular(12),
-      ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          const Text('ACTIVE ROUTE', style: TextStyle(fontSize: 11, color: Colors.grey)),
-          const SizedBox(height: 8),
-          Text(
-            routeText,
-            style: const TextStyle(
-              fontSize: 16,
-              fontWeight: FontWeight.bold,
-              color: Color(0xFF1E293B),
-            ),
-          ),
-          const SizedBox(height: 12),
-          SizedBox(
-            width: double.infinity,
-            child: ElevatedButton(
-              onPressed: onEndRoute,
-              style: ElevatedButton.styleFrom(
-                backgroundColor: const Color(0xFFEF4444),
-                foregroundColor: Colors.white,
-                shape: RoundedRectangleBorder(
-                  borderRadius: BorderRadius.circular(8),
-                ),
-              ),
-              child: const Text('END ROUTE'),
-            ),
-          ),
-        ],
-      ),
-    );
-  }
-}
-
-class QuickActionButton extends StatelessWidget {
-  final String text;
-  final IconData icon;
-  final Color color;
-  final VoidCallback onTap;
-
-  const QuickActionButton({
-    Key? key,
-    required this.text,
-    required this.icon,
-    required this.color,
-    required this.onTap,
-  }) : super(key: key);
-
-  @override
-  Widget build(BuildContext context) {
-    return Expanded(
-      child: GestureDetector(
-        onTap: onTap,
-        child: Container(
-          padding: const EdgeInsets.symmetric(vertical: 12),
-          decoration: BoxDecoration(
-            color: color.withOpacity(0.1),
-            borderRadius: BorderRadius.circular(8),
-            border: Border.all(color: color.withOpacity(0.3)),
-          ),
-          child: Column(
-            children: [
-              Icon(icon, color: color, size: 20),
-              const SizedBox(height: 4),
-              Text(
-                text,
-                style: TextStyle(fontSize: 9, color: color, fontWeight: FontWeight.bold),
-              ),
-            ],
-          ),
-        ),
-      ),
-    );
-  }
-}
-
-class DemandPulseCard extends StatelessWidget {
-  final String busyHours;
-  final String hotStages;
-
-  const DemandPulseCard({
-    Key? key,
-    required this.busyHours,
-    required this.hotStages,
-  }) : super(key: key);
-
-  @override
-  Widget build(BuildContext context) {
-    return Container(
-      padding: const EdgeInsets.all(16),
-      decoration: BoxDecoration(
-        color: Colors.white,
-        borderRadius: BorderRadius.circular(12),
-      ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          const Text('DEMAND PULSE', style: TextStyle(fontSize: 11, color: Colors.grey)),
-          const SizedBox(height: 8),
-          Text('Busy Hours: $busyHours', style: const TextStyle(fontSize: 13)),
-          const SizedBox(height: 4),
-          Text('Hot Destinations: $hotStages', style: const TextStyle(fontSize: 13)),
-        ],
-      ),
-    );
-  }
-}
-//new fuel prices card
-class FuelPricesCard extends StatelessWidget {
-  final List<dynamic> prices;
-
-  const FuelPricesCard({Key? key, required this.prices}) : super(key: key);
-
-  @override
-  Widget build(BuildContext context) {
-    return Container(
-      padding: const EdgeInsets.all(12),
-      decoration: BoxDecoration(
-        color: Colors.white,
-        borderRadius: BorderRadius.circular(12),
-      ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          const Text('FUEL PRICES', style: TextStyle(fontSize: 10, color: Colors.grey)),
-          const SizedBox(height: 8),
-          if (prices.isEmpty)
-            const Text('No fuel data yet')
-          else
-            ...prices.take(3).map((price) {
-              final map = price as Map<String, dynamic>;
-              return Padding(
-                padding: const EdgeInsets.symmetric(vertical: 3),
-                child: Text(
-                  '⛽ ${map['company']}  P ${map['petrol']}  D ${map['diesel']}',
-                  style: const TextStyle(fontSize: 10),
-                ),
-              );
-            }).toList(),
-        ],
-      ),
-    );
-  }
-}
-//end of fuel prices card
-class FuelPricesCard2 extends StatelessWidget {
-  final List<dynamic> prices;
-
-  const FuelPricesCard2({Key? key, required this.prices}) : super(key: key);
-
-  @override
-  Widget build(BuildContext context) {
-    return Container(
-      padding: const EdgeInsets.all(16),
-      decoration: BoxDecoration(
-        color: Colors.white,
-        borderRadius: BorderRadius.circular(12),
-      ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          const Text('FUEL PRICES', style: TextStyle(fontSize: 11, color: Colors.grey)),
-          const SizedBox(height: 8),
-          if (prices.isEmpty)
-            const Text('No fuel data yet')
-          else
-            ...prices.map((price) {
-              final map = price as Map<String, dynamic>;
-              return Padding(
-                padding: const EdgeInsets.symmetric(vertical: 4),
-                child: Text(
-                  '⛽ ${map['company']}    Petrol ${map['petrol']}  Diesel ${map['diesel']}',
-                  style: const TextStyle(fontSize: 13),
-                ),
-              );
-            }).toList(),
         ],
       ),
     );
@@ -585,17 +586,24 @@ class FuelNewsCard extends StatelessWidget {
       padding: const EdgeInsets.all(16),
       decoration: BoxDecoration(
         color: Colors.white,
-        borderRadius: BorderRadius.circular(12),
+        borderRadius: BorderRadius.circular(16),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withOpacity(0.04),
+            blurRadius: 12,
+            offset: const Offset(0, 4),
+          ),
+        ],
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          const Text('FUEL NEWS', style: TextStyle(fontSize: 11, color: Colors.grey)),
+          Text('FUEL NEWS', style: AppText.caption),
           const SizedBox(height: 8),
           ...news.map((item) {
             return Padding(
               padding: const EdgeInsets.symmetric(vertical: 4),
-              child: Text('📰 $item', style: const TextStyle(fontSize: 13)),
+              child: Text('📰 $item', style: AppText.body.copyWith(fontSize: 13)),
             );
           }).toList(),
         ],

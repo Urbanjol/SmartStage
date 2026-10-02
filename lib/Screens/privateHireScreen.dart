@@ -5,7 +5,7 @@ import 'package:cloud_functions/cloud_functions.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:url_launcher/url_launcher.dart';
 import 'dart:math';
-import '../Config/theme.dart';
+import '../Config/app_config.dart';
 import '../Widgets/destination_card.dart';
 import '../Widgets/nearby_driver_card.dart';
 
@@ -58,7 +58,6 @@ class _PrivateHireScreenState extends ConsumerState<PrivateHireScreen> {
   }
 
   int _calculateFare(double distanceKm) {
-    // Base fare 3000 UGX + 500 UGX per km
     return (3000 + (distanceKm * 500)).round();
   }
 
@@ -136,9 +135,12 @@ class _PrivateHireScreenState extends ConsumerState<PrivateHireScreen> {
 
     if (user == null) {
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(
-          content: Text('Please login to book'),
-          backgroundColor: SmartStageColors.red,
+        SnackBar(
+          content: Text(
+            'Please login to book',
+            style: AppText.body.copyWith(color: Colors.white),
+          ),
+          backgroundColor: const Color(0xFFEF4444),
         ),
       );
       return;
@@ -182,34 +184,31 @@ class _PrivateHireScreenState extends ConsumerState<PrivateHireScreen> {
             shape: RoundedRectangleBorder(
               borderRadius: BorderRadius.circular(20),
             ),
-            title: const Text(
-              'BOOKING SENT!',
-              style: TextStyle(
-                fontWeight: FontWeight.bold,
-                color: SmartStageColors.primaryBlue,
+            title: Text(
+              'BOOKING SENT',
+              style: AppText.header.copyWith(
+                fontSize: 16,
+                color: const Color(0xFF2563EB),
               ),
             ),
             content: Column(
               mainAxisSize: MainAxisSize.min,
               children: [
-                const Text(
+                Text(
                   'Your booking request has been sent to nearby drivers.',
+                  style: AppText.body,
                 ),
                 const SizedBox(height: 12),
                 Text(
                   'Destination: $destinationName',
-                  style: const TextStyle(
-                    fontSize: 13,
-                    fontWeight: FontWeight.bold,
-                  ),
+                  style: AppText.body.copyWith(fontWeight: FontWeight.bold),
                 ),
                 const SizedBox(height: 4),
                 Text(
                   'Estimated fare: UGX $fare',
-                  style: const TextStyle(
-                    fontSize: 13,
-                    fontWeight: FontWeight.bold,
-                    color: Color(0xFF10B981),
+                  style: AppText.number.copyWith(
+                    fontSize: 14,
+                    color: const Color(0xFF10B981),
                   ),
                 ),
               ],
@@ -217,10 +216,10 @@ class _PrivateHireScreenState extends ConsumerState<PrivateHireScreen> {
             actions: [
               TextButton(
                 onPressed: () => Navigator.pop(context),
-                child: const Text(
+                child: Text(
                   'OK',
-                  style: TextStyle(
-                    color: SmartStageColors.primaryBlue,
+                  style: AppText.body.copyWith(
+                    color: const Color(0xFF2563EB),
                     fontWeight: FontWeight.bold,
                   ),
                 ),
@@ -233,8 +232,11 @@ class _PrivateHireScreenState extends ConsumerState<PrivateHireScreen> {
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
-            content: Text('Booking failed: $e'),
-            backgroundColor: SmartStageColors.red,
+            content: Text(
+              'Booking failed: $e',
+              style: AppText.body.copyWith(color: Colors.white),
+            ),
+            backgroundColor: const Color(0xFFEF4444),
           ),
         );
       }
@@ -266,12 +268,15 @@ class _PrivateHireScreenState extends ConsumerState<PrivateHireScreen> {
     return Scaffold(
       backgroundColor: const Color(0xFFF5F7FA),
       appBar: AppBar(
-        title: const Text('PRIVATE HIRE'),
+        title: Text(
+          'PRIVATE HIRE',
+          style: AppText.header.copyWith(fontSize: 16, color: Colors.white),
+        ),
         backgroundColor: const Color(0xFF1E293B),
         elevation: 0,
       ),
       body: SingleChildScrollView(
-        padding: const EdgeInsets.all(12),
+        padding: const EdgeInsets.all(16),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
@@ -280,19 +285,32 @@ class _PrivateHireScreenState extends ConsumerState<PrivateHireScreen> {
               padding: const EdgeInsets.symmetric(horizontal: 16),
               decoration: BoxDecoration(
                 color: Colors.white,
-                borderRadius: BorderRadius.circular(12),
+                borderRadius: BorderRadius.circular(16),
+                boxShadow: [
+                  BoxShadow(
+                    color: Colors.black.withOpacity(0.04),
+                    blurRadius: 12,
+                    offset: const Offset(0, 4),
+                  ),
+                ],
               ),
               child: TextField(
                 controller: _destinationController,
-                decoration: const InputDecoration(
+                style: AppText.body,
+                decoration: InputDecoration(
                   hintText: 'Where do you want to go?',
+                  hintStyle: AppText.caption,
                   border: InputBorder.none,
-                  prefixIcon: Icon(Icons.search),
+                  prefixIcon: const Icon(
+                    Icons.search,
+                    color: Color(0xFF2563EB),
+                  ),
+                  contentPadding: const EdgeInsets.symmetric(vertical: 16),
                 ),
                 onSubmitted: _searchPlaces,
               ),
             ),
-            const SizedBox(height: 8),
+            const SizedBox(height: 12),
 
             // Error
             if (_errorMessage != null)
@@ -300,8 +318,8 @@ class _PrivateHireScreenState extends ConsumerState<PrivateHireScreen> {
                 padding: const EdgeInsets.symmetric(vertical: 8),
                 child: Text(
                   _errorMessage!,
-                  style: const TextStyle(
-                    color: SmartStageColors.red,
+                  style: AppText.body.copyWith(
+                    color: const Color(0xFFEF4444),
                     fontSize: 13,
                   ),
                 ),
@@ -313,7 +331,7 @@ class _PrivateHireScreenState extends ConsumerState<PrivateHireScreen> {
                 padding: EdgeInsets.all(20),
                 child: Center(
                   child: CircularProgressIndicator(
-                    color: SmartStageColors.primaryBlue,
+                    color: Color(0xFF2563EB),
                   ),
                 ),
               ),
@@ -325,9 +343,9 @@ class _PrivateHireScreenState extends ConsumerState<PrivateHireScreen> {
                 physics: const NeverScrollableScrollPhysics(),
                 gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
                   crossAxisCount: 2,
-                  crossAxisSpacing: 10,
-                  mainAxisSpacing: 10,
-                  childAspectRatio: 0.72,
+                  crossAxisSpacing: 12,
+                  mainAxisSpacing: 12,
+                  childAspectRatio: 0.65,
                 ),
                 itemCount: _places.length,
                 itemBuilder: (context, index) {
@@ -353,30 +371,32 @@ class _PrivateHireScreenState extends ConsumerState<PrivateHireScreen> {
                 },
               ),
 
-            const SizedBox(height: 20),
+            const SizedBox(height: 24),
 
             // Nearby Drivers
-            const Text(
+            Text(
               'NEARBY DRIVERS',
-              style: TextStyle(
-                fontSize: 12,
-                fontWeight: FontWeight.bold,
-                color: Colors.grey,
-                letterSpacing: 1,
-              ),
+              style: AppText.caption.copyWith(letterSpacing: 1.5),
             ),
-            const SizedBox(height: 8),
+            const SizedBox(height: 10),
             if (_drivers.isEmpty)
               Container(
                 padding: const EdgeInsets.all(24),
                 decoration: BoxDecoration(
                   color: Colors.white,
-                  borderRadius: BorderRadius.circular(12),
+                  borderRadius: BorderRadius.circular(16),
+                  boxShadow: [
+                    BoxShadow(
+                      color: Colors.black.withOpacity(0.04),
+                      blurRadius: 12,
+                      offset: const Offset(0, 4),
+                    ),
+                  ],
                 ),
-                child: const Center(
+                child: Center(
                   child: Text(
                     'No nearby drivers',
-                    style: TextStyle(color: Colors.grey),
+                    style: AppText.caption,
                   ),
                 ),
               )

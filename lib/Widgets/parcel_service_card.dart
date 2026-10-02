@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import '../Config/app_config.dart';
 
 class ParcelServiceCard extends StatelessWidget {
   final String title;
@@ -20,11 +21,17 @@ class ParcelServiceCard extends StatelessWidget {
       onTap: onTap,
       child: Container(
         width: 120,
-        padding: const EdgeInsets.all(14),
+        padding: const EdgeInsets.all(16),
         decoration: BoxDecoration(
           color: Colors.white,
-          borderRadius: BorderRadius.circular(12),
-          border: Border.all(color: color.withOpacity(0.2)),
+          borderRadius: BorderRadius.circular(16),
+          boxShadow: [
+            BoxShadow(
+              color: Colors.black.withOpacity(0.04),
+              blurRadius: 12,
+              offset: const Offset(0, 4),
+            ),
+          ],
         ),
         child: Column(
           children: [
@@ -37,14 +44,13 @@ class ParcelServiceCard extends StatelessWidget {
               ),
               child: Icon(icon, color: color, size: 22),
             ),
-            const SizedBox(height: 8),
+            const SizedBox(height: 10),
             Text(
               title,
               textAlign: TextAlign.center,
-              style: const TextStyle(
+              style: AppText.body.copyWith(
                 fontSize: 12,
                 fontWeight: FontWeight.w600,
-                color: Color(0xFF1E293B),
               ),
             ),
           ],

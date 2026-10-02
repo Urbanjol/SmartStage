@@ -4,9 +4,9 @@ import 'package:firebase_auth/firebase_auth.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:cloud_functions/cloud_functions.dart';
 import '../Config/theme.dart';
+import '../Config/app_config.dart';
 import 'driver_parcel_request.dart';
 import 'driver_request_screen.dart';
-import 'notification_screen.dart';
 import '../Providers/Driver_stats_provider.dart';
 import '../Providers/fuel_data_provider.dart';
 import '../Widgets/driver_cards.dart';
@@ -106,7 +106,8 @@ class _DriverHomeScreenState extends ConsumerState<DriverHomeScreen> {
     if (mounted) {
       setState(() {
         _trafficCondition = traffic['condition'] ?? 'Unknown';
-        _trafficDelay = (traffic['estimated_delay_minutes'] as num?)?.toInt() ?? 0;
+        _trafficDelay =
+            (traffic['estimated_delay_minutes'] as num?)?.toInt() ?? 0;
         _trafficSummary = traffic['summary'] ?? '';
       });
     }
@@ -226,7 +227,6 @@ class _DriverHomeScreenState extends ConsumerState<DriverHomeScreen> {
 
   @override
   Widget build(BuildContext context) {
-    final isDark = Theme.of(context).brightness == Brightness.dark;
     final stats = ref.watch(driverStatsProvider);
     final fuelAsync = ref.watch(fuelDataProvider);
     final fuelData = fuelAsync.value;
@@ -247,9 +247,13 @@ class _DriverHomeScreenState extends ConsumerState<DriverHomeScreen> {
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  const Text(
+                  Text(
                     'Balance',
-                    style: TextStyle(fontSize: 10, color: Colors.white70),
+                    style: TextStyle(
+                      fontSize: 10,
+                      color: Colors.white.withOpacity(0.7),
+                      fontFamily: AppText.body.fontFamily,
+                    ),
                   ),
                   Row(
                     children: [
@@ -333,12 +337,10 @@ class _DriverHomeScreenState extends ConsumerState<DriverHomeScreen> {
             ),
             const SizedBox(height: 12),
             ActiveRouteCard(
-              routeText: widget.routeNames.isNotEmpty
-                  //? widget.routeNames.join(' → ')
-                  ? _activeRouteNames.join(' -> ')
+              routeText: _activeRouteNames.isNotEmpty
+                  ? _activeRouteNames.join(' → ')
                   : 'No active route',
-                  onEndRoute: _endRoute,
-
+              onEndRoute: _endRoute,
             ),
             const SizedBox(height: 12),
             ActiveRouteTrafficCard(
@@ -382,8 +384,6 @@ class _DriverHomeScreenState extends ConsumerState<DriverHomeScreen> {
               prices: marketData?.fuel ?? [],
             ),
             const SizedBox(height: 12),
-            //FuelPricesCard(prices: marketData?.fuel ?? []),
-            //const SizedBox(height: 12),
             TrafficCard(traffic: marketData?.traffic ?? []),
             const SizedBox(height: 12),
             FuelNewsCard(news: marketData?.news ?? []),
@@ -414,7 +414,8 @@ class _DriverHomeScreenState extends ConsumerState<DriverHomeScreen> {
                     Navigator.push(
                       context,
                       MaterialPageRoute(
-                        builder: (context) => const DriverParcelRequestsScreen(),
+                        builder: (context) =>
+                        const DriverParcelRequestsScreen(),
                       ),
                     ).then((_) => _loadParcelRequestCount());
                   },

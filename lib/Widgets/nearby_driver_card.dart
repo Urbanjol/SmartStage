@@ -1,5 +1,5 @@
 import 'package:flutter/material.dart';
-import '../Config/theme.dart';
+import '../Config/app_config.dart';
 
 class NearbyDriverCard extends StatelessWidget {
   final String plate;
@@ -22,12 +22,18 @@ class NearbyDriverCard extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Container(
-      margin: const EdgeInsets.only(bottom: 8),
+      margin: const EdgeInsets.only(bottom: 10),
       padding: const EdgeInsets.all(14),
       decoration: BoxDecoration(
         color: Colors.white,
-        borderRadius: BorderRadius.circular(12),
-        border: Border.all(color: Colors.grey.shade200),
+        borderRadius: BorderRadius.circular(16),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withOpacity(0.04),
+            blurRadius: 12,
+            offset: const Offset(0, 4),
+          ),
+        ],
       ),
       child: Row(
         children: [
@@ -35,12 +41,12 @@ class NearbyDriverCard extends StatelessWidget {
             width: 44,
             height: 44,
             decoration: BoxDecoration(
-              color: SmartStageColors.primaryBlue.withOpacity(0.1),
+              color: const Color(0xFF2563EB).withOpacity(0.1),
               shape: BoxShape.circle,
             ),
             child: const Icon(
               Icons.directions_bus,
-              color: SmartStageColors.primaryBlue,
+              color: Color(0xFF2563EB),
             ),
           ),
           const SizedBox(width: 12),
@@ -50,27 +56,26 @@ class NearbyDriverCard extends StatelessWidget {
               children: [
                 Text(
                   '$driverName • $plate',
-                  style: const TextStyle(
+                  style: AppText.body.copyWith(
                     fontSize: 13,
                     fontWeight: FontWeight.bold,
-                    color: Color(0xFF1E293B),
                   ),
                 ),
                 const SizedBox(height: 2),
                 Text(
                   'To: $destination',
-                  style: const TextStyle(fontSize: 11, color: Colors.grey),
+                  style: AppText.caption,
                 ),
                 const SizedBox(height: 2),
                 Text(
                   phone,
-                  style: const TextStyle(fontSize: 11, color: Colors.grey),
+                  style: AppText.caption.copyWith(fontSize: 11),
                 ),
               ],
             ),
           ),
           IconButton(
-            icon: const Icon(Icons.message, color: SmartStageColors.primaryBlue),
+            icon: const Icon(Icons.message, color: Color(0xFF2563EB)),
             onPressed: onMessage,
           ),
           IconButton(

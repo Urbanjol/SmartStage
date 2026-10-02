@@ -4,12 +4,11 @@ import 'package:firebase_auth/firebase_auth.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:smart_stage/Screens/help_and_support.dart';
 import 'package:smart_stage/Screens/settings_screen.dart';
-import '../Config/theme.dart';
+import '../Config/app_config.dart';
 import 'notification_screen.dart';
 import 'trip_history_screen.dart';
 import 'payment_method.dart';
 import '../Screens/verification_screen_driver.dart';
-//import 'notifications_screen.dart';
 
 class ProfileScreen extends ConsumerStatefulWidget {
   const ProfileScreen({Key? key}) : super(key: key);
@@ -65,38 +64,29 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
   Future<void> _logout() async {
     await FirebaseAuth.instance.signOut();
   }
-  //new logout dialog box function
+
   void _showLogoutDialog() {
     showDialog(
       context: context,
       builder: (context) => AlertDialog(
-        backgroundColor: Theme.of(context).brightness == Brightness.dark
-            ? SmartStageColors.navyCard
-            : Colors.white,
+        backgroundColor: Colors.white,
         shape: RoundedRectangleBorder(
           borderRadius: BorderRadius.circular(20),
         ),
-        title: const Text(
+        title: Text(
           'LOGOUT',
-          style: TextStyle(
-            fontWeight: FontWeight.bold,
-            color: SmartStageColors.deepNavy,
-          ),
+          style: AppText.header.copyWith(fontSize: 16),
         ),
-        content: const Text(
+        content: Text(
           'Are you sure you want to logout?',
-          style: TextStyle(
-            color: SmartStageColors.greyDark,
-          ),
+          style: AppText.body,
         ),
         actions: [
           TextButton(
             onPressed: () => Navigator.pop(context),
-            child: const Text(
+            child: Text(
               'CANCEL',
-              style: TextStyle(
-                color: SmartStageColors.greyMid,
-              ),
+              style: AppText.body.copyWith(color: const Color(0xFF64748B)),
             ),
           ),
           TextButton(
@@ -104,10 +94,10 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
               Navigator.pop(context);
               _logout();
             },
-            child: const Text(
+            child: Text(
               'LOGOUT',
-              style: TextStyle(
-                color: SmartStageColors.red,
+              style: AppText.body.copyWith(
+                color: const Color(0xFFEF4444),
                 fontWeight: FontWeight.bold,
               ),
             ),
@@ -116,27 +106,25 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
       ),
     );
   }
-  //end of function
 
   @override
   Widget build(BuildContext context) {
-    final isDark = Theme.of(context).brightness == Brightness.dark;
     final isDriver = _roles.contains('driver') || _roles.contains('conductor');
 
     return Scaffold(
-      backgroundColor: isDark
-          ? SmartStageColors.darkBackground
-          : SmartStageColors.lightBackground,
+      backgroundColor: const Color(0xFFF5F7FA),
       appBar: AppBar(
-        title: const Text('PROFILE'),
-        backgroundColor: isDark
-            ? SmartStageColors.deepNavy
-            : SmartStageColors.deepNavy,
+        title: Text(
+          'PROFILE',
+          style: AppText.header.copyWith(fontSize: 16, color: Colors.white),
+        ),
+        backgroundColor: const Color(0xFF1E293B),
+        elevation: 0,
       ),
       body: _isLoading
           ? const Center(
         child: CircularProgressIndicator(
-          color: SmartStageColors.electricGreen,
+          color: Color(0xFF2563EB),
         ),
       )
           : SingleChildScrollView(
@@ -147,83 +135,54 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
             Container(
               padding: const EdgeInsets.all(20),
               decoration: BoxDecoration(
-                gradient: const LinearGradient(
-                  colors: [
-                    SmartStageColors.deepNavy,
-                    SmartStageColors.navyLight,
-                  ],
-                  begin: Alignment.topLeft,
-                  end: Alignment.bottomRight,
-                ),
+                color: Colors.white,
                 borderRadius: BorderRadius.circular(20),
                 boxShadow: [
                   BoxShadow(
-                    color: SmartStageColors.blueGlow,
-                    blurRadius: 20,
-                    spreadRadius: 1,
+                    color: Colors.black.withOpacity(0.04),
+                    blurRadius: 12,
+                    offset: const Offset(0, 4),
                   ),
                 ],
               ),
               child: Column(
                 children: [
-                  // Avatar
                   Container(
                     width: 80,
                     height: 80,
                     decoration: BoxDecoration(
                       shape: BoxShape.circle,
-                      color: SmartStageColors.electricGreen,
+                      color: const Color(0xFF2563EB).withOpacity(0.1),
                       border: Border.all(
-                        color: SmartStageColors.white,
-                        width: 3,
+                        color: const Color(0xFF2563EB),
+                        width: 2,
                       ),
-                      boxShadow: [
-                        BoxShadow(
-                          color: SmartStageColors.greenGlow,
-                          blurRadius: 20,
-                          spreadRadius: 2,
-                        ),
-                      ],
                     ),
                     child: const Icon(
                       Icons.person,
-                      color: SmartStageColors.white,
+                      color: Color(0xFF2563EB),
                       size: 40,
                     ),
                   ),
                   const SizedBox(height: 12),
-                  Text(
-                    _userName,
-                    style: const TextStyle(
-                      fontSize: 20,
-                      fontWeight: FontWeight.bold,
-                      color: SmartStageColors.white,
-                    ),
-                  ),
+                  Text(_userName, style: AppText.header.copyWith(fontSize: 18)),
                   const SizedBox(height: 4),
-                  Text(
-                    _phoneNumber,
-                    style: const TextStyle(
-                      fontSize: 13,
-                      color: SmartStageColors.greyMid,
-                    ),
-                  ),
+                  Text(_phoneNumber, style: AppText.caption),
                   const SizedBox(height: 10),
                   Container(
                     padding: const EdgeInsets.symmetric(
                         horizontal: 14, vertical: 6),
                     decoration: BoxDecoration(
                       color: isDriver
-                          ? SmartStageColors.electricGreen
-                          : SmartStageColors.gold,
+                          ? const Color(0xFF2563EB)
+                          : const Color(0xFFFFB800),
                       borderRadius: BorderRadius.circular(20),
                     ),
                     child: Text(
                       isDriver ? 'DRIVER' : 'PASSENGER',
-                      style: const TextStyle(
-                        fontSize: 10,
+                      style: AppText.caption.copyWith(
+                        color: Colors.white,
                         fontWeight: FontWeight.bold,
-                        color: SmartStageColors.deepNavy,
                         letterSpacing: 1,
                       ),
                     ),
@@ -237,27 +196,21 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
             Row(
               children: [
                 _buildStatCard(
-                  context,
                   label: 'TRIPS',
                   value: _totalTrips.toString(),
                   icon: Icons.directions_bus,
-                  color: SmartStageColors.electricGreen,
                 ),
                 const SizedBox(width: 10),
                 _buildStatCard(
-                  context,
                   label: 'RATING',
                   value: _rating > 0 ? _rating.toStringAsFixed(1) : 'New',
                   icon: Icons.star,
-                  color: SmartStageColors.gold,
                 ),
                 const SizedBox(width: 10),
                 _buildStatCard(
-                  context,
                   label: 'STATUS',
                   value: isDriver ? 'Active' : 'Ready',
                   icon: Icons.check_circle,
-                  color: SmartStageColors.blueGlow,
                 ),
               ],
             ),
@@ -266,20 +219,19 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
             // Menu Items
             Container(
               decoration: BoxDecoration(
-                color: isDark
-                    ? SmartStageColors.navyCard
-                    : SmartStageColors.white,
+                color: Colors.white,
                 borderRadius: BorderRadius.circular(16),
-                border: Border.all(
-                  color: isDark
-                      ? Colors.white10
-                      : SmartStageColors.greyLight,
-                ),
+                boxShadow: [
+                  BoxShadow(
+                    color: Colors.black.withOpacity(0.04),
+                    blurRadius: 12,
+                    offset: const Offset(0, 4),
+                  ),
+                ],
               ),
               child: Column(
                 children: [
                   _buildMenuItem(
-                    context,
                     icon: Icons.notifications_outlined,
                     title: 'Notifications',
                     onTap: () {
@@ -292,29 +244,25 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
                       );
                     },
                   ),
-                  _buildDivider(isDark),
+                  _buildDivider(),
                   _buildMenuItem(
-                    context,
                     icon: Icons.history,
                     title: 'Trip History',
                     onTap: () {
-                      // Navigate to trip history
                       Navigator.push(
-                          context,
-                          MaterialPageRoute(
+                        context,
+                        MaterialPageRoute(
                           builder: (context) =>
-                      const TripHistoryScreen(),
-                      ),
+                          const TripHistoryScreen(),
+                        ),
                       );
                     },
                   ),
-                  _buildDivider(isDark),
+                  _buildDivider(),
                   _buildMenuItem(
-                    context,
                     icon: Icons.payment_outlined,
                     title: 'Payment Methods',
                     onTap: () {
-                      // Navigate to payment methods
                       Navigator.push(
                         context,
                         MaterialPageRoute(
@@ -324,29 +272,24 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
                       );
                     },
                   ),
-                  _buildDivider(isDark),
+                  _buildDivider(),
                   _buildMenuItem(
-                    context,
                     icon: Icons.settings_outlined,
                     title: 'Settings',
                     onTap: () {
-                      // Navigate to settings
                       Navigator.push(
                         context,
                         MaterialPageRoute(
-                          builder: (context) =>
-                          const SettingsScreen(),
+                          builder: (context) => const SettingsScreen(),
                         ),
                       );
                     },
                   ),
-                  _buildDivider(isDark),
+                  _buildDivider(),
                   _buildMenuItem(
-                    context,
                     icon: Icons.help_outline,
                     title: 'Help & Support',
                     onTap: () {
-                      // Navigate to help
                       Navigator.push(
                         context,
                         MaterialPageRoute(
@@ -356,24 +299,22 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
                       );
                     },
                   ),
-                  //check if is driver
                   if (isDriver) ...[
-                    _buildDivider(isDark),
+                    _buildDivider(),
                     _buildMenuItem(
-                      context,
                       icon: Icons.verified_outlined,
                       title: 'Get Verified',
                       onTap: () {
                         Navigator.push(
                           context,
                           MaterialPageRoute(
-                            builder: (context) => const VerificationScreen(),
+                            builder: (context) =>
+                            const VerificationScreen(),
                           ),
                         );
                       },
                     ),
                   ],
-                  //close
                 ],
               ),
             ),
@@ -381,31 +322,30 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
 
             // Logout Button
             GestureDetector(
-              onTap: _showLogoutDialog, //logout
+              onTap: _showLogoutDialog,
               child: Container(
                 padding: const EdgeInsets.symmetric(vertical: 16),
                 decoration: BoxDecoration(
-                  color: SmartStageColors.red.withOpacity(0.1),
+                  color: const Color(0xFFEF4444).withOpacity(0.08),
                   borderRadius: BorderRadius.circular(16),
                   border: Border.all(
-                    color: SmartStageColors.red.withOpacity(0.3),
+                    color: const Color(0xFFEF4444).withOpacity(0.3),
                   ),
                 ),
-                child: const Row(
+                child: Row(
                   mainAxisAlignment: MainAxisAlignment.center,
                   children: [
-                    Icon(
+                    const Icon(
                       Icons.logout,
-                      color: SmartStageColors.red,
+                      color: Color(0xFFEF4444),
                       size: 20,
                     ),
-                    SizedBox(width: 8),
+                    const SizedBox(width: 8),
                     Text(
                       'LOGOUT',
-                      style: TextStyle(
-                        fontSize: 14,
+                      style: AppText.body.copyWith(
                         fontWeight: FontWeight.bold,
-                        color: SmartStageColors.red,
+                        color: const Color(0xFFEF4444),
                       ),
                     ),
                   ],
@@ -418,65 +358,43 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
     );
   }
 
-  Widget _buildStatCard(
-      BuildContext context, {
-        required String label,
-        required String value,
-        required IconData icon,
-        required Color color,
-      }) {
-    final isDark = Theme.of(context).brightness == Brightness.dark;
-
+  Widget _buildStatCard({
+    required String label,
+    required String value,
+    required IconData icon,
+  }) {
     return Expanded(
       child: Container(
         padding: const EdgeInsets.all(14),
         decoration: BoxDecoration(
-          color: isDark ? SmartStageColors.navyCard : SmartStageColors.white,
+          color: Colors.white,
           borderRadius: BorderRadius.circular(16),
-          border: Border.all(
-            color: isDark ? Colors.white10 : SmartStageColors.greyLight,
-          ),
+          boxShadow: [
+            BoxShadow(
+              color: Colors.black.withOpacity(0.04),
+              blurRadius: 12,
+              offset: const Offset(0, 4),
+            ),
+          ],
         ),
         child: Column(
           children: [
-            Icon(icon, color: color, size: 22),
+            Icon(icon, color: const Color(0xFF2563EB), size: 22),
             const SizedBox(height: 8),
-            Text(
-              value,
-              style: TextStyle(
-                fontSize: 16,
-                fontWeight: FontWeight.bold,
-                color: isDark
-                    ? SmartStageColors.white
-                    : SmartStageColors.deepNavy,
-              ),
-            ),
+            Text(value, style: AppText.number.copyWith(fontSize: 16)),
             const SizedBox(height: 2),
-            Text(
-              label,
-              style: TextStyle(
-                fontSize: 9,
-                fontWeight: FontWeight.bold,
-                color: isDark
-                    ? SmartStageColors.greyMid
-                    : SmartStageColors.greyDark,
-                letterSpacing: 1,
-              ),
-            ),
+            Text(label, style: AppText.caption.copyWith(letterSpacing: 1)),
           ],
         ),
       ),
     );
   }
 
-  Widget _buildMenuItem(
-      BuildContext context, {
-        required IconData icon,
-        required String title,
-        required VoidCallback onTap,
-      }) {
-    final isDark = Theme.of(context).brightness == Brightness.dark;
-
+  Widget _buildMenuItem({
+    required IconData icon,
+    required String title,
+    required VoidCallback onTap,
+  }) {
     return GestureDetector(
       onTap: onTap,
       child: Padding(
@@ -485,27 +403,19 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
           children: [
             Icon(
               icon,
-              color: SmartStageColors.electricGreen,
+              color: const Color(0xFF2563EB),
               size: 20,
             ),
             const SizedBox(width: 12),
             Expanded(
               child: Text(
                 title,
-                style: TextStyle(
-                  fontSize: 14,
-                  fontWeight: FontWeight.w500,
-                  color: isDark
-                      ? SmartStageColors.white
-                      : SmartStageColors.deepNavy,
-                ),
+                style: AppText.body.copyWith(fontWeight: FontWeight.w500),
               ),
             ),
-            Icon(
+            const Icon(
               Icons.chevron_right,
-              color: isDark
-                  ? SmartStageColors.greyDark
-                  : SmartStageColors.greyMid,
+              color: Color(0xFF94A3B8),
               size: 20,
             ),
           ],
@@ -514,10 +424,10 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
     );
   }
 
-  Widget _buildDivider(bool isDark) {
+  Widget _buildDivider() {
     return Divider(
       height: 1,
-      color: isDark ? Colors.white10 : SmartStageColors.greyLight,
+      color: const Color(0xFFF1F5F9),
     );
   }
 }
