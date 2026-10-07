@@ -7,12 +7,71 @@ if (admin.apps.length === 0) {
 
 const db = admin.firestore();
 
-export const findMultimodalJourney = functions.https.onCall(async (data, context) => {
-  const { origin, destination } = data as { origin: string; destination: string };
+function haversineDistance(
+  lat1: number,
+  lng1: number,
+  lat2: number,
+  lng2: number
+): number {
+  const R = 6371;
+  const dLat = ((lat2 - lat1) * Math.PI) / 180;
+  const dLng = ((lng2 - lng1) * Math.PI) / 180;
+  const a =
+    Math.sin(dLat / 2) * Math.sin(dLat / 2) +
+    Math.cos((lat1 * Math.PI) / 180) *
+      Math.cos((lat2 * Math.PI) / 180) *
+      Math.sin(dLng / 2) *
+      Math.sin(dLng / 2);
+  const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
+  return R * c;
+}
 
-  if (!origin || !destination) {
-    throw new functions.https.HttpsError("invalid-argument", "Origin and destination required");
+export const findMultimodalJourney = functions.https.onCall(async (data, context) => {
+
+const { originLat, originLng, destination } = data as {
+  originLat: number;
+  originLng: number;
+  destination: string;
+};
+  //const { origin, destination } = data as { origin: string; destination: string };
+
+
+  if (originLat == null || originLng == null || !destination) {
+    throw new functions.https.HttpsError(
+      "invalid-argument",
+      "originLat, originLng, and destination required"
+    );
   }
+const stagesSnapshot = await db.collection("stages").get();
+const stages: any[] = [];
+stagesSnapshot.forEach((doc) => stages.push({ id: doc.id, ...doc.data() }));
+
+let nearestStage: any = null;
+let nearestDistance = Infinity;
+
+for (const stage of stages) {
+  const loc = stage.location || stage.Location;
+  if (!loc) continue;
+
+  const lat = loc._lat ?? loc.lat ?? loc._latitude;
+  const lng = loc._lng ?? loc.lng ?? loc._longitude;
+
+  if (lat == null || lng == null) continue;
+
+  const dist = haversineDistance(originLat, originLng, lat, lng);
+
+  if (dist < nearestDistance) {
+    nearestDistance = dist;
+    nearestStage = stage;
+  }
+}
+
+if (!nearestStage) {
+  return { journeys: [] };
+}
+
+const origin = nearestStage.name;
+
 
   const taxisSnapshot = await db.collection("taxis")
     .where("status", "in", ["LOADING", "EN_ROUTE"])

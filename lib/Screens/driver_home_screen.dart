@@ -10,6 +10,8 @@ import 'driver_request_screen.dart';
 import '../Providers/Driver_stats_provider.dart';
 import '../Providers/fuel_data_provider.dart';
 import '../Widgets/driver_cards.dart';
+import '../Widgets/fade_in_card.dart';
+import '../Widgets/pulse_dot.dart';
 import '../Providers/market_data_provider.dart';
 import '../Services/traffic_service.dart';
 import '../Services/location.dart';
@@ -87,9 +89,12 @@ class _DriverHomeScreenState extends ConsumerState<DriverHomeScreen> {
 
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(
-            content: Text('Route ended'),
-            backgroundColor: Color(0xFF10B981),
+          SnackBar(
+            content: Text(
+              'Route ended',
+              style: AppText.body.copyWith(color: Colors.white),
+            ),
+            backgroundColor: const Color(0xFF2563EB),
           ),
         );
       }
@@ -228,8 +233,6 @@ class _DriverHomeScreenState extends ConsumerState<DriverHomeScreen> {
   @override
   Widget build(BuildContext context) {
     final stats = ref.watch(driverStatsProvider);
-    final fuelAsync = ref.watch(fuelDataProvider);
-    final fuelData = fuelAsync.value;
     final marketAsync = ref.watch(marketDataProvider);
     final marketData = marketAsync.value;
 
@@ -249,11 +252,7 @@ class _DriverHomeScreenState extends ConsumerState<DriverHomeScreen> {
                 children: [
                   Text(
                     'Balance',
-                    style: TextStyle(
-                      fontSize: 10,
-                      color: Colors.white.withOpacity(0.7),
-                      fontFamily: AppText.body.fontFamily,
-                    ),
+                    style: AppText.caption.copyWith(color: Colors.white70),
                   ),
                   Row(
                     children: [
@@ -261,9 +260,8 @@ class _DriverHomeScreenState extends ConsumerState<DriverHomeScreen> {
                         _isBalanceVisible
                             ? 'UGX ${_balance.toStringAsFixed(0)}'
                             : '••••••',
-                        style: const TextStyle(
+                        style: AppText.number.copyWith(
                           fontSize: 14,
-                          fontWeight: FontWeight.bold,
                           color: Colors.white,
                         ),
                       ),
@@ -279,6 +277,8 @@ class _DriverHomeScreenState extends ConsumerState<DriverHomeScreen> {
               ),
             ),
             const Spacer(),
+            if (_isOnline) const PulseDot(color: Color(0xFF2563EB)),
+            const SizedBox(width: 12),
             const Icon(Icons.person_outline, color: Colors.white),
           ],
         ),
@@ -289,138 +289,192 @@ class _DriverHomeScreenState extends ConsumerState<DriverHomeScreen> {
         padding: const EdgeInsets.all(12),
         child: Column(
           children: [
-            BalanceChangeCard(
-              balance: _balance,
-              change: _balanceChange,
-              isVisible: _isBalanceVisible,
-              onToggle: () {
-                setState(() {
-                  _isBalanceVisible = !_isBalanceVisible;
-                });
-              },
+            FadeInCard(
+              delayMs: 0,
+              child: BalanceHeroCard(
+                balance: _balance,
+                change: _balanceChange,
+                isVisible: _isBalanceVisible,
+                onToggle: () {
+                  setState(() {
+                    _isBalanceVisible = !_isBalanceVisible;
+                  });
+                },
+              ),
             ),
             const SizedBox(height: 12),
-            Row(
-              children: [
-                LiveStatCard(
-                  label: 'Seats',
-                  value: '$_seatsAvailable',
-                  change: 'Live',
-                  isPositive: true,
-                ),
-                const SizedBox(width: 8),
-                LiveStatCard(
-                  label: 'Searches',
-                  value: '${stats.todaySearches}',
-                  change: '${stats.searchesChange.toStringAsFixed(1)}%',
-                  isPositive: stats.searchesChange >= 0,
-                ),
-              ],
-            ),
-            const SizedBox(height: 8),
-            Row(
-              children: [
-                LiveStatCard(
-                  label: 'Earnings',
-                  value: 'UGX ${_balance.toStringAsFixed(0)}',
-                  change: '${stats.earningsChange.toStringAsFixed(1)}%',
-                  isPositive: stats.earningsChange >= 0,
-                ),
-                const SizedBox(width: 8),
-                LiveStatCard(
-                  label: 'Status',
-                  value: _isOnline ? 'ONLINE' : 'OFFLINE',
-                  change: _isOnline ? 'Active' : 'Hidden',
-                  isPositive: _isOnline,
-                ),
-              ],
+
+            FadeInCard(
+              delayMs: 100,
+              child: DualStatCard(
+                title: "TODAY'S PERFORMANCE",
+                label1: 'SEATS',
+                value1: '$_seatsAvailable',
+                change1: 'Live',
+                isPositive1: true,
+                label2: 'SEARCHES',
+                value2: '${stats.todaySearches}',
+                change2: '${stats.searchesChange.toStringAsFixed(1)}%',
+                isPositive2: stats.searchesChange >= 0,
+              ),
             ),
             const SizedBox(height: 12),
-            ActiveRouteCard(
-              routeText: _activeRouteNames.isNotEmpty
-                  ? _activeRouteNames.join(' → ')
-                  : 'No active route',
-              onEndRoute: _endRoute,
+
+
+            //new fade card
+            FadeInCard(
+              delayMs: 100,
+              child: DualStatCard(
+                title: "TODAY'S PERFORMANCE",
+                label1: 'SEATS',
+                value1: '$_seatsAvailable',
+                change1: 'Live',
+                isPositive1: true,
+                label2: 'SEARCHES',
+                value2: '${stats.todaySearches}',
+                change2: '${stats.searchesChange.toStringAsFixed(1)}%',
+                isPositive2: stats.searchesChange >= 0,
+              ),
             ),
             const SizedBox(height: 12),
-            ActiveRouteTrafficCard(
-              condition: _trafficCondition,
-              delayMinutes: _trafficDelay,
-              summary: _trafficSummary,
+
+            FadeInCard(
+              delayMs: 200,
+              child: SeatRingCard(
+                filled: 14 - _seatsAvailable,
+                total: 14,
+              ),
             ),
             const SizedBox(height: 12),
-            Row(
-              children: [
-                QuickActionButton(
-                  text: 'ONLINE',
-                  icon: _isOnline ? Icons.toggle_on : Icons.toggle_off,
-                  color: _isOnline ? const Color(0xFF10B981) : Colors.grey,
-                  onTap: _toggleOnline,
-                ),
-                const SizedBox(width: 8),
-                QuickActionButton(
-                  text: 'SEATS',
-                  icon: Icons.event_seat,
-                  color: const Color(0xFF2563EB),
-                  onTap: () {
-                    // Show seat picker
-                  },
-                ),
-                const SizedBox(width: 8),
-                QuickActionButton(
-                  text: 'FUEL',
-                  icon: Icons.local_gas_station,
-                  color: const Color(0xFFFFB800),
-                  onTap: () {
-                    // Show fuel prices
-                  },
-                ),
-              ],
+
+            FadeInCard(
+              delayMs: 300,
+              child: DualStatCard(
+                title: 'EARNINGS',
+                label1: 'TODAY',
+                value1: 'UGX ${_balance.toStringAsFixed(0)}',
+                change1: '${stats.earningsChange.toStringAsFixed(1)}%',
+                isPositive1: stats.earningsChange >= 0,
+                label2: 'STATUS',
+                value2: _isOnline ? 'ONLINE' : 'OFFLINE',
+                change2: _isOnline ? 'Active' : 'Hidden',
+                isPositive2: _isOnline,
+              ),
+            ),
+            //const SizedBox(height: 12),
+            //end fade card
+            const SizedBox(height: 12),
+
+            FadeInCard(
+              delayMs: 300,
+              child: ActiveRouteCard(
+                routeText: _activeRouteNames.isNotEmpty
+                    ? _activeRouteNames.join(' → ')
+                    : 'No active route',
+                onEndRoute: _endRoute,
+              ),
             ),
             const SizedBox(height: 12),
-            DemandFuelRow(
-              busyHours: stats.busyHours,
-              hotStages: stats.hotStages,
-              prices: marketData?.fuel ?? [],
+
+            //const SizedBox(height: 12),
+            FadeInCard(
+              delayMs: 500,
+              child: Row(
+                children: [
+                  QuickActionButton(
+                    text: 'ONLINE',
+                    icon: _isOnline ? Icons.toggle_on : Icons.toggle_off,
+                    color: _isOnline
+                        ? const Color(0xFF2563EB)
+                        : const Color(0xFF64748B),
+                    onTap: _toggleOnline,
+                  ),
+                  const SizedBox(width: 8),
+                  QuickActionButton(
+                    text: 'SEATS',
+                    icon: Icons.event_seat,
+                    color: const Color(0xFF2563EB),
+                    onTap: () {},
+                  ),
+                  const SizedBox(width: 8),
+                  QuickActionButton(
+                    text: 'FUEL',
+                    icon: Icons.local_gas_station,
+                    color: const Color(0xFFFFB800),
+                    onTap: () {},
+                  ),
+                ],
+              ),
             ),
             const SizedBox(height: 12),
-            TrafficCard(traffic: marketData?.traffic ?? []),
+
+            FadeInCard(
+              delayMs: 600,
+              child: DemandFuelRow(
+                busyHours: stats.busyHours,
+                hotStages: stats.hotStages,
+                prices: marketData?.fuel ?? [],
+              ),
+            ),
             const SizedBox(height: 12),
-            FuelNewsCard(news: marketData?.news ?? []),
+
+
+            //new
+            FadeInCard(
+              delayMs: 700,
+              child: TrafficCard(
+                routeCondition: _trafficCondition,
+                routeDelay: _trafficDelay,
+                routeSummary: _trafficSummary,
+                traffic: marketData?.traffic ?? [],
+              ),
+            ),
+            //end
             const SizedBox(height: 12),
-            Row(
-              children: [
-                RequestActionCard(
-                  title: 'BOOKING',
-                  count: _bookingRequestCount,
-                  icon: Icons.inbox_outlined,
-                  color: const Color(0xFF2563EB),
-                  onTap: () {
-                    Navigator.push(
-                      context,
-                      MaterialPageRoute(
-                        builder: (context) => const DriverRequestsScreen(),
-                      ),
-                    ).then((_) => _loadBookingRequestCount());
-                  },
-                ),
-                const SizedBox(width: 8),
-                RequestActionCard(
-                  title: 'PARCEL',
-                  count: _parcelRequestCount,
-                  icon: Icons.inventory_2_outlined,
-                  color: const Color(0xFF10B981),
-                  onTap: () {
-                    Navigator.push(
-                      context,
-                      MaterialPageRoute(
-                        builder: (context) =>
-                        const DriverParcelRequestsScreen(),
-                      ),
-                    ).then((_) => _loadParcelRequestCount());
-                  },
-                ),
-              ],
+
+            FadeInCard(
+              delayMs: 800,
+              child: FuelNewsCard(news: marketData?.news ?? []),
+            ),
+            const SizedBox(height: 12),
+
+            FadeInCard(
+              delayMs: 900,
+              child: Row(
+                children: [
+                  RequestActionCard(
+                    title: 'BOOKING',
+                    count: _bookingRequestCount,
+                    icon: Icons.inbox_outlined,
+                    color: const Color(0xFF2563EB),
+                    onTap: () {
+                      Navigator.push(
+                        context,
+                        MaterialPageRoute(
+                          builder: (context) =>
+                          const DriverRequestsScreen(),
+                        ),
+                      ).then((_) => _loadBookingRequestCount());
+                    },
+                  ),
+                  const SizedBox(width: 8),
+                  RequestActionCard(
+                    title: 'PARCEL',
+                    count: _parcelRequestCount,
+                    icon: Icons.inventory_2_outlined,
+                    color: const Color(0xFF2563EB),
+                    onTap: () {
+                      Navigator.push(
+                        context,
+                        MaterialPageRoute(
+                          builder: (context) =>
+                          const DriverParcelRequestsScreen(),
+                        ),
+                      ).then((_) => _loadParcelRequestCount());
+                    },
+                  ),
+                ],
+              ),
             ),
           ],
         ),

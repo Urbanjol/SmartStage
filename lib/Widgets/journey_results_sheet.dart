@@ -1,14 +1,8 @@
 import 'package:flutter/material.dart';
-import '../Config/theme.dart';
+import '../Config/app_config.dart';
 import '../models/Journey_model.dart';
 import 'package:http/http.dart' as http;
 import 'dart:convert';
-
-//import 'package:flutter/material.dart';
-//import 'package:http/http.dart' as http;
-//import 'dart:convert';
-//import '../Config/theme.dart';
-//import '../models/Journey_model.dart';
 
 class JourneyResultsSheet extends StatefulWidget {
   final List<Journey> journeys;
@@ -64,24 +58,22 @@ class _JourneyResultsSheetState extends State<JourneyResultsSheet> {
 
   @override
   Widget build(BuildContext context) {
-    final isDark = Theme.of(context).brightness == Brightness.dark;
     final destination = widget.destination;
     final journeys = widget.journeys;
-    final photoUrl = _photoUrl ??
-        'https://maps.googleapis.com/maps/api/place/photo?maxwidth=600&photoreference=default&key=AIzaSyAFzb2gSE1rAofZCW01N3bAm4BIA1fdgHc';
+    final photoUrl = _photoUrl ?? '';
 
     return Container(
-      decoration: BoxDecoration(
-        color: isDark ? SmartStageColors.navyCard : Colors.white,
-        borderRadius: const BorderRadius.only(
-          topLeft: Radius.circular(28),
-          topRight: Radius.circular(28),
+      decoration: const BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.only(
+          topLeft: Radius.circular(24),
+          topRight: Radius.circular(24),
         ),
         boxShadow: [
           BoxShadow(
-            color: Colors.black.withOpacity(0.15),
+            color: Color(0x14000000),
             blurRadius: 20,
-            offset: const Offset(0, -4),
+            offset: Offset(0, -4),
           ),
         ],
       ),
@@ -89,75 +81,87 @@ class _JourneyResultsSheetState extends State<JourneyResultsSheet> {
       child: Column(
         mainAxisSize: MainAxisSize.min,
         children: [
+          // Handle bar
           Container(
             width: 36,
             height: 4,
             decoration: BoxDecoration(
-              color: isDark
-                  ? SmartStageColors.greyDark
-                  : SmartStageColors.greyLight,
+              color: const Color(0xFFF1F5F9),
               borderRadius: BorderRadius.circular(2),
             ),
           ),
           const SizedBox(height: 16),
 
-          Padding(
-            padding: const EdgeInsets.symmetric(horizontal: 16),
-            child: Container(
-              height: 160,
-              decoration: BoxDecoration(
-                borderRadius: BorderRadius.circular(16),
-                image: DecorationImage(
-                  image: NetworkImage(photoUrl),
-                  fit: BoxFit.cover,
-                ),
-              ),
+          // Destination photo
+          if (photoUrl.isNotEmpty)
+            Padding(
+              padding: const EdgeInsets.symmetric(horizontal: 16),
               child: Container(
+                height: 140,
                 decoration: BoxDecoration(
                   borderRadius: BorderRadius.circular(16),
-                  gradient: LinearGradient(
-                    colors: [
-                      Colors.black.withOpacity(0.6),
-                      Colors.transparent,
-                    ],
-                    begin: Alignment.bottomCenter,
-                    end: Alignment.topCenter,
+                  image: DecorationImage(
+                    image: NetworkImage(photoUrl),
+                    fit: BoxFit.cover,
                   ),
                 ),
-                child: Padding(
-                  padding: const EdgeInsets.all(16),
-                  child: Align(
-                    alignment: Alignment.bottomLeft,
-                    child: Text(
-                      'To: $destination',
-                      style: const TextStyle(
-                        fontSize: 18,
-                        fontWeight: FontWeight.bold,
-                        color: Colors.white,
+                child: Container(
+                  decoration: BoxDecoration(
+                    borderRadius: BorderRadius.circular(16),
+                    gradient: LinearGradient(
+                      colors: [
+                        Colors.black.withOpacity(0.6),
+                        Colors.transparent,
+                      ],
+                      begin: Alignment.bottomCenter,
+                      end: Alignment.topCenter,
+                    ),
+                  ),
+                  child: Padding(
+                    padding: const EdgeInsets.all(16),
+                    child: Align(
+                      alignment: Alignment.bottomLeft,
+                      child: Text(
+                        'To: $destination',
+                        style: AppText.header.copyWith(
+                          fontSize: 18,
+                          color: Colors.white,
+                        ),
                       ),
                     ),
                   ),
                 ),
               ),
             ),
-          ),
+
+          if (photoUrl.isEmpty)
+            Padding(
+              padding: const EdgeInsets.symmetric(horizontal: 16),
+              child: Container(
+                height: 80,
+                decoration: BoxDecoration(
+                  color: const Color(0xFFF5F7FA),
+                  borderRadius: BorderRadius.circular(16),
+                ),
+                child: Center(
+                  child: Text(
+                    'To: $destination',
+                    style: AppText.header.copyWith(fontSize: 16),
+                  ),
+                ),
+              ),
+            ),
 
           const SizedBox(height: 16),
 
+          // Routes count
           Padding(
             padding: const EdgeInsets.symmetric(horizontal: 24),
             child: Row(
-              mainAxisAlignment: MainAxisAlignment.spaceBetween,
               children: [
                 Text(
-                  '${journeys.length} routes',
-                  style: TextStyle(
-                    fontWeight: FontWeight.bold,
-                    fontSize: 16,
-                    color: isDark
-                        ? SmartStageColors.white
-                        : SmartStageColors.deepNavy,
-                  ),
+                  '${journeys.length} ${journeys.length == 1 ? 'route' : 'routes'}',
+                  style: AppText.title,
                 ),
               ],
             ),
@@ -165,13 +169,17 @@ class _JourneyResultsSheetState extends State<JourneyResultsSheet> {
 
           const SizedBox(height: 12),
 
+          // Journey list
           Expanded(
             child: ListView.builder(
               shrinkWrap: true,
               padding: const EdgeInsets.symmetric(horizontal: 16),
               itemCount: journeys.length,
               itemBuilder: (context, index) {
-                return _JourneyCard(journey: journeys[index], index: index);
+                return _JourneyCard(
+                  journey: journeys[index],
+                  index: index,
+                );
               },
             ),
           ),
@@ -181,52 +189,48 @@ class _JourneyResultsSheetState extends State<JourneyResultsSheet> {
   }
 }
 
-// Rest of journey card code remains same
+// ============================================================
+// JOURNEY CARD
+// ============================================================
 class _JourneyCard extends StatelessWidget {
   final Journey journey;
   final int index;
 
   const _JourneyCard({required this.journey, required this.index});
 
-  Color _getGlowColor(String space) {
+  Color _getSeatColor(String space) {
     if (space.contains('Space Available')) {
-      return SmartStageColors.electricGreen;
+      return const Color(0xFF10B981);
     } else if (space.contains('Filling Up')) {
-      return SmartStageColors.orange;
+      return const Color(0xFFFFB800);
     } else {
-      return SmartStageColors.red;
+      return const Color(0xFFEF4444);
     }
   }
 
   @override
   Widget build(BuildContext context) {
-    final isDark = Theme.of(context).brightness == Brightness.dark;
-
     final primarySpace =
     journey.legs.isNotEmpty ? journey.legs.first.space : 'Full';
-    final glowColor = _getGlowColor(primarySpace);
+    final seatColor = _getSeatColor(primarySpace);
+    final isFastest = index == 0;
 
     return Container(
       margin: const EdgeInsets.only(bottom: 12),
       decoration: BoxDecoration(
-        color: isDark ? SmartStageColors.navyLight : Colors.white,
+        color: Colors.white,
         borderRadius: BorderRadius.circular(16),
         border: Border.all(
-          color: index == 0 ? SmartStageColors.gold : glowColor.withOpacity(0.4),
-          width: index == 0 ? 2 : 1.5,
+          color: isFastest
+              ? const Color(0xFF2563EB)
+              : const Color(0xFFF1F5F9),
+          width: isFastest ? 2 : 1,
         ),
         boxShadow: [
           BoxShadow(
-            color: index == 0
-                ? SmartStageColors.goldGlow
-                : glowColor.withOpacity(0.25),
-            blurRadius: index == 0 ? 22 : 12,
-            spreadRadius: index == 0 ? 1 : 0,
-          ),
-          BoxShadow(
-            color: Colors.black.withOpacity(0.06),
-            blurRadius: 8,
-            offset: const Offset(0, 2),
+            color: Colors.black.withOpacity(0.04),
+            blurRadius: 12,
+            offset: const Offset(0, 4),
           ),
         ],
       ),
@@ -235,104 +239,85 @@ class _JourneyCard extends StatelessWidget {
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
+            // Header
             Row(
-              mainAxisAlignment: MainAxisAlignment.spaceBetween,
               children: [
-                Row(
-                  children: [
-                    if (index == 0)
-                      Container(
-                        padding: const EdgeInsets.symmetric(
-                            horizontal: 10, vertical: 5),
-                        decoration: BoxDecoration(
-                          gradient: const LinearGradient(
-                            colors: [
-                              SmartStageColors.gold,
-                              SmartStageColors.softGold,
-                            ],
-                          ),
-                          borderRadius: BorderRadius.circular(20),
-                        ),
-                        child: const Text(
-                          'FASTEST',
-                          style: TextStyle(
-                            color: SmartStageColors.deepNavy,
-                            fontSize: 10,
-                            fontWeight: FontWeight.bold,
-                            letterSpacing: 0.5,
-                          ),
-                        ),
-                      ),
-                    const SizedBox(width: 8),
-                    Text(
-                      '${journey.totalTimeMin} min',
-                      style: TextStyle(
+                if (isFastest)
+                  Container(
+                    padding: const EdgeInsets.symmetric(
+                        horizontal: 10, vertical: 4),
+                    decoration: BoxDecoration(
+                      color: const Color(0xFF2563EB),
+                      borderRadius: BorderRadius.circular(20),
+                    ),
+                    child: Text(
+                      'FASTEST',
+                      style: AppText.caption.copyWith(
+                        color: Colors.white,
                         fontWeight: FontWeight.bold,
-                        fontSize: 18,
-                        color: isDark
-                            ? SmartStageColors.white
-                            : SmartStageColors.deepNavy,
+                        letterSpacing: 1,
+                        fontSize: 10,
                       ),
                     ),
-                  ],
+                  ),
+                if (isFastest) const SizedBox(width: 8),
+                Text(
+                  '${journey.totalTimeMin} min',
+                  style: AppText.number.copyWith(fontSize: 18),
                 ),
+                const Spacer(),
                 Text(
                   'UGX ${journey.totalFare}',
-                  style: const TextStyle(
-                    fontWeight: FontWeight.bold,
+                  style: AppText.number.copyWith(
                     fontSize: 18,
-                    color: SmartStageColors.gold,
+                    color: const Color(0xFF2563EB),
                   ),
                 ),
               ],
             ),
+
             const SizedBox(height: 12),
 
+            Divider(
+              height: 1,
+              color: const Color(0xFFF1F5F9),
+              thickness: 1,
+            ),
+
+            const SizedBox(height: 12),
+
+            // Legs
             ...journey.legs.asMap().entries.map((entry) {
               final i = entry.key;
               final leg = entry.value;
               final isLast = i == journey.legs.length - 1;
 
               return Padding(
-                padding: const EdgeInsets.only(bottom: 8),
+                padding: const EdgeInsets.only(bottom: 12),
                 child: Row(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
                     SizedBox(
-                      width: 24,
+                      width: 20,
                       child: Column(
                         children: [
                           Container(
-                            width: 12,
-                            height: 12,
+                            width: 10,
+                            height: 10,
                             decoration: BoxDecoration(
                               shape: BoxShape.circle,
-                              color: i == 0
-                                  ? SmartStageColors.electricGreen
-                                  : SmartStageColors.gold,
+                              color: const Color(0xFF2563EB),
                               border: Border.all(
-                                color: isDark
-                                    ? SmartStageColors.navyLight
-                                    : Colors.white,
+                                color: Colors.white,
                                 width: 2,
                               ),
-                              boxShadow: [
-                                BoxShadow(
-                                  color: i == 0
-                                      ? SmartStageColors.greenGlow
-                                      : SmartStageColors.goldGlow,
-                                  blurRadius: 8,
-                                ),
-                              ],
                             ),
                           ),
                           if (!isLast)
                             Container(
                               width: 2,
                               height: 30,
-                              color: isDark
-                                  ? SmartStageColors.greyDark
-                                  : SmartStageColors.greyLight,
+                              color: const Color(0xFFF1F5F9),
                             ),
                         ],
                       ),
@@ -344,46 +329,35 @@ class _JourneyCard extends StatelessWidget {
                         crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
                           if (leg.walkMin > 0)
-                            Text(
-                              'Walk ${leg.walkMin} min to ${leg.stage}',
-                              style: TextStyle(
-                                fontSize: 13,
-                                color: isDark
-                                    ? SmartStageColors.greyMid
-                                    : SmartStageColors.greyDark,
+                            Padding(
+                              padding: const EdgeInsets.only(bottom: 4),
+                              child: Text(
+                                'Walk ${leg.walkMin} min to ${leg.stage}',
+                                style: AppText.caption,
                               ),
                             ),
-                          const SizedBox(height: 4),
                           Row(
                             children: [
                               Container(
                                 padding: const EdgeInsets.symmetric(
-                                    horizontal: 8, vertical: 3),
+                                    horizontal: 8, vertical: 4),
                                 decoration: BoxDecoration(
-                                  color: SmartStageColors.deepNavy,
-                                  borderRadius: BorderRadius.circular(6),
-                                  border: Border.all(
-                                    color: SmartStageColors.electricGreen
-                                        .withOpacity(0.4),
-                                  ),
+                                  color: const Color(0xFFF5F7FA),
+                                  borderRadius: BorderRadius.circular(8),
                                 ),
                                 child: Row(
                                   mainAxisSize: MainAxisSize.min,
                                   children: [
                                     Text(
                                       leg.vehicleIcon,
-                                      style: const TextStyle(
-                                        fontSize: 12,
-                                      ),
+                                      style: const TextStyle(fontSize: 12),
                                     ),
                                     const SizedBox(width: 4),
                                     Text(
                                       leg.matatuPlate,
-                                      style: const TextStyle(
-                                        fontSize: 11,
+                                      style: AppText.caption.copyWith(
                                         fontWeight: FontWeight.bold,
-                                        color: SmartStageColors.white,
-                                        letterSpacing: 0.5,
+                                        color: const Color(0xFF1E293B),
                                       ),
                                     ),
                                   ],
@@ -393,13 +367,11 @@ class _JourneyCard extends StatelessWidget {
                               Expanded(
                                 child: Text(
                                   leg.destination,
-                                  style: TextStyle(
+                                  style: AppText.body.copyWith(
                                     fontWeight: FontWeight.w600,
-                                    fontSize: 14,
-                                    color: isDark
-                                        ? SmartStageColors.white
-                                        : SmartStageColors.deepNavy,
                                   ),
+                                  maxLines: 1,
+                                  overflow: TextOverflow.ellipsis,
                                 ),
                               ),
                             ],
@@ -408,18 +380,13 @@ class _JourneyCard extends StatelessWidget {
                           Row(
                             children: [
                               _buildInfoChip(
-                                  Icons.access_time, leg.departure, isDark),
-                              const SizedBox(width: 8),
-                              _buildInfoChip(
-                                  Icons.flag, leg.arrival, isDark),
+                                  Icons.access_time, leg.departure),
+                              const SizedBox(width: 12),
+                              _buildInfoChip(Icons.flag, leg.arrival),
                             ],
                           ),
                           const SizedBox(height: 6),
-                          Row(
-                            children: [
-                              _buildSeatStatus(leg.space, glowColor),
-                            ],
-                          ),
+                          _buildSeatPill(leg.space, seatColor),
                         ],
                       ),
                     ),
@@ -428,20 +395,33 @@ class _JourneyCard extends StatelessWidget {
               );
             }).toList(),
 
-            const SizedBox(height: 8),
+            const SizedBox(height: 4),
 
-            GlowButton(
-              text: 'BOOK THIS ROUTE',
-              color: index == 0
-                  ? SmartStageColors.gold
-                  : SmartStageColors.electricGreen,
-              glowColor: index == 0
-                  ? SmartStageColors.goldGlow
-                  : SmartStageColors.greenGlow,
-              icon: Icons.check_circle_outline,
-              onPressed: () {
-                // Booking will be implemented later
-              },
+            // Select button
+            SizedBox(
+              width: double.infinity,
+              child: ElevatedButton(
+                onPressed: () {
+                  // Booking logic
+                },
+                style: ElevatedButton.styleFrom(
+                  backgroundColor: const Color(0xFF2563EB),
+                  foregroundColor: Colors.white,
+                  elevation: 0,
+                  padding: const EdgeInsets.symmetric(vertical: 14),
+                  shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(12),
+                  ),
+                ),
+                child: Text(
+                  'SELECT THIS ROUTE',
+                  style: AppText.body.copyWith(
+                    color: Colors.white,
+                    fontWeight: FontWeight.bold,
+                    letterSpacing: 1,
+                  ),
+                ),
+              ),
             ),
           ],
         ),
@@ -449,9 +429,9 @@ class _JourneyCard extends StatelessWidget {
     );
   }
 
-  Widget _buildSeatStatus(String space, Color color) {
+  Widget _buildSeatPill(String space, Color color) {
     return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
+      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
       decoration: BoxDecoration(
         color: color.withOpacity(0.1),
         borderRadius: BorderRadius.circular(20),
@@ -461,24 +441,17 @@ class _JourneyCard extends StatelessWidget {
         mainAxisSize: MainAxisSize.min,
         children: [
           Container(
-            width: 8,
-            height: 8,
+            width: 6,
+            height: 6,
             decoration: BoxDecoration(
               shape: BoxShape.circle,
               color: color,
-              boxShadow: [
-                BoxShadow(
-                  color: color.withOpacity(0.6),
-                  blurRadius: 6,
-                ),
-              ],
             ),
           ),
           const SizedBox(width: 6),
           Text(
             space,
-            style: TextStyle(
-              fontSize: 11,
+            style: AppText.caption.copyWith(
               fontWeight: FontWeight.bold,
               color: color,
             ),
@@ -488,26 +461,19 @@ class _JourneyCard extends StatelessWidget {
     );
   }
 
-  Widget _buildInfoChip(IconData icon, String text, bool isDark) {
+  Widget _buildInfoChip(IconData icon, String text) {
     return Row(
       mainAxisSize: MainAxisSize.min,
       children: [
         Icon(
           icon,
           size: 12,
-          color: isDark
-              ? SmartStageColors.greyMid
-              : SmartStageColors.greyDark,
+          color: const Color(0xFF94A3B8),
         ),
-        const SizedBox(width: 2),
+        const SizedBox(width: 4),
         Text(
           text,
-          style: TextStyle(
-            fontSize: 11,
-            color: isDark
-                ? SmartStageColors.greyMid
-                : SmartStageColors.greyDark,
-          ),
+          style: AppText.caption.copyWith(fontSize: 11),
         ),
       ],
     );

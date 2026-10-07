@@ -9,6 +9,7 @@ export * from "./traffic_functions";
 export * from "./alert_functions";
 export * from "./multi_modal_functions";
 export * from "./places_functions";
+export * from "./auto_complete_functions";
 
 if (admin.apps.length === 0) {
   admin.initializeApp();
